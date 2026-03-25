@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKYPLOT — Mission Builder</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy:    #032B43;
+  --cyan:    #14BDEB;
+  --dark:    #070715;
+  --grey:    #AAAAAA;
+  --light:   #FFFBFF;
+  --white:   #ffffff;
+  --border:  #d4e6f0;
+  --bg:      #f4f8fb;
+  --card-bg: #f9fbfd;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--dark);
+  font-family: 'Manrope','Segoe UI',system-ui,sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────── */
+.header {
+  background: var(--navy);
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header-logo-label {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--light);
+  letter-spacing: .04em;
+}
+.header-logo-label span { color: var(--cyan); }
+.header-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--grey);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-left: 2px;
+  border-left: 1px solid rgba(255,255,255,.15);
+  padding-left: 10px;
+}
+.header-mission-count {
+  font-size: 11px;
+  color: rgba(20,189,235,.7);
+  margin-left: 8px;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-wdb-toggle {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(20,189,235,.35);
+  background: rgba(20,189,235,.08);
+  color: var(--cyan);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background .12s, border-color .12s;
+  white-space: nowrap;
+}
+.btn-wdb-toggle:hover { background: rgba(20,189,235,.18); border-color: var(--cyan); }
+.btn-wdb-toggle.active { background: rgba(20,189,235,.22); border-color: var(--cyan); }
+
+/* ─── Layout ─────────────────────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 20px;
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: calc(100vh - 52px);
+}
+.left-col { display: flex; flex-direction: column; gap: 14px; }
+
+/* ─── Cards ──────────────────────────────────────────────────────────── */
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 4px rgba(3,43,67,.06);
+}
+.section-header {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--grey);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 5px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.section-header .section-actions { display: flex; gap: 6px; }
+
+/* ─── Mission Tabs ───────────────────────────────────────────────────── */
+.mission-tabs-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 1px 4px rgba(3,43,67,.06);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tabs-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--grey);
+  flex-shrink: 0;
+}
+.tabs-scroll {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  flex: 1;
+  padding-bottom: 2px;
+}
+.tabs-scroll::-webkit-scrollbar { height: 3px; }
+.tabs-scroll::-webkit-scrollbar-track { background: transparent; }
+.tabs-scroll::-webkit-scrollbar-thumb { background: rgba(3,43,67,.12); border-radius: 2px; }
+.mission-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px 0 10px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5a7a90;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color .12s, background .12s, color .12s;
+  user-select: none;
+}
+.mission-tab:hover { border-color: #a8cfe0; background: var(--white); color: var(--dark); }
+.mission-tab.active { background: var(--white); border-color: var(--cyan); color: var(--navy); box-shadow: 0 1px 4px rgba(20,189,235,.15); }
+.tab-color-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tab-remove {
+  width: 16px; height: 16px;
+  border-radius: 3px; border: none; background: transparent;
+  color: var(--grey); cursor: pointer; font-size: 11px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; margin-left: 1px;
+  transition: background .1s, color .1s;
+  line-height: 1; flex-shrink: 0;
+}
+.tab-remove:hover { background: #fee2e2; color: #dc2626; }
+.btn-add-mission {
+  height: 30px; padding: 0 10px;
+  border-radius: 7px; border: 1.5px dashed #b8d4e8; background: transparent;
+  font-size: 12px; font-weight: 600; font-family: inherit; color: #8ab0c8;
+  cursor: pointer; flex-shrink: 0;
+  transition: border-color .12s, color .12s, background .12s;
+  white-space: nowrap;
+}
+.btn-add-mission:hover { border-color: var(--cyan); color: var(--navy); background: #f0faff; }
+
+/* ─── Form Grid ──────────────────────────────────────────────────────── */
+.form-grid { display: grid; gap: 8px; }
+.form-row { display: grid; gap: 8px; }
+.form-row.cols-1 { grid-template-columns: 1fr; }
+.form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+.form-row.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 3px; }
+.form-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #6b8aa0; }
+
+/* ─── Inputs ─────────────────────────────────────────────────────────── */
+.input {
+  height: 32px; padding: 0 9px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; font-family: inherit;
+  background: var(--white); color: var(--dark); outline: none;
+  transition: border-color .15s, box-shadow .15s; width: 100%;
+}
+.input:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(20,189,235,.15); }
+.input.mono { font-family: 'IBM Plex Mono','Consolas',monospace; letter-spacing: .02em; }
+.input.error { border-color: #dc2626; }
+.input:focus.error { box-shadow: 0 0 0 2px rgba(220,38,38,.15); }
+
+/* ─── Buttons ────────────────────────────────────────────────────────── */
+.btn {
+  height: 30px; padding: 0 12px;
+  border-radius: 6px; border: 1px solid var(--border); background: var(--white);
+  font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; color: var(--dark);
+  transition: background .12s, border-color .12s, color .12s;
+  white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;
+}
+.btn:hover { background: #f0f8fd; border-color: var(--cyan); }
+.btn.primary { background: var(--cyan); color: var(--navy); border-color: var(--cyan); font-weight: 700; }
+.btn.primary:hover { background: #0fa8d4; border-color: #0fa8d4; }
+.btn.danger { color: #dc2626; }
+.btn.danger:hover { background: #fef2f2; border-color: #dc2626; }
+.btn.icon { width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; border-radius: 5px; flex-shrink: 0; }
+
+/* ─── Color Swatches ─────────────────────────────────────────────────── */
+.swatch-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0; }
+.swatch { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .1s, border-color .1s; position: relative; flex-shrink: 0; }
+.swatch:hover { transform: scale(1.15); }
+.swatch.selected { box-shadow: 0 0 0 2px var(--white) inset, 0 0 0 3px var(--white); }
+
+/* ─── Route Items ────────────────────────────────────────────────────── */
+.route-list { display: flex; flex-direction: column; gap: 6px; }
+.route-item { border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--card-bg); transition: border-color .15s; position: relative; }
+.route-item:hover { border-color: #b8d4e8; }
+.route-item.ao-type { border-left: 3px solid var(--cyan); }
+.route-item-main { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.item-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.item-square-ao { width: 12px; height: 12px; flex-shrink: 0; transform: rotate(45deg); border-radius: 2px; }
+.route-label { flex: 1; min-width: 80px; }
+.tot-sep { font-size: 13px; color: var(--grey); flex-shrink: 0; line-height: 1; }
+.item-actions { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+
+/* ─── Vertices ───────────────────────────────────────────────────────── */
+.vertices-section { margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--border); padding-left: 18px; }
+.vertices-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #6b8aa0; }
+.vertex-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.vertex-num { font-size: 10px; color: var(--grey); font-family: 'IBM Plex Mono','Consolas',monospace; width: 16px; text-align: right; flex-shrink: 0; }
+.vertex-warn { font-size: 10px; color: #f59e0b; margin-top: 4px; }
+
+/* ─── Clear ──────────────────────────────────────────────────────────── */
+.clear-section { text-align: center; padding: 8px 0 4px; }
+.clear-hint { font-size: 10px; color: var(--grey); margin-top: 4px; }
+
+/* ─── Right Column: CSV Preview ──────────────────────────────────────── */
+.right-col { position: sticky; top: 72px; height: calc(100vh - 92px); display: flex; flex-direction: column; }
+.preview-card { background: #0e1e2c; border-radius: 12px; display: flex; flex-direction: column; height: 100%; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.2); }
+.preview-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid rgba(20,189,235,.15); flex-shrink: 0; }
+.preview-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--cyan); }
+.preview-mission-badge { font-size: 10px; color: rgba(20,189,235,.6); margin-left: 8px; font-weight: 500; letter-spacing: .04em; }
+.btn-copy { height: 26px; padding: 0 10px; border-radius: 5px; border: 1px solid rgba(20,189,235,.3); background: rgba(20,189,235,.08); color: var(--cyan); font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background .12s, border-color .12s; }
+.btn-copy:hover { background: rgba(20,189,235,.18); border-color: var(--cyan); }
+.preview-body { flex: 1; overflow-y: auto; padding: 14px; }
+.preview-body::-webkit-scrollbar { width: 6px; }
+.preview-body::-webkit-scrollbar-track { background: transparent; }
+.preview-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+#csv-preview { font-family: 'IBM Plex Mono','Consolas',monospace; font-size: 12px; line-height: 1.7; white-space: pre; background: transparent; color: var(--light); margin: 0; }
+.csv-mission  { color: #14BDEB; font-weight: bold; }
+.csv-point    { color: #FFFBFF; }
+.csv-aowpt    { color: #f59e0b; font-weight: bold; }
+.csv-aovtx    { color: #f59e0b; opacity: .75; }
+.csv-comment  { color: #4a6a7a; font-style: italic; }
+.csv-hint     { color: #4a6a7a; font-style: italic; }
+.csv-sep      { color: #1a3550; }
+
+/* ─── Waypoint DB Panel ──────────────────────────────────────────────── */
+.wdb-overlay {
+  position: fixed; inset: 0; z-index: 190;
+  background: transparent;
+  pointer-events: none;
+}
+.wdb-overlay.open { pointer-events: auto; }
+
+.wdb-panel {
+  position: fixed;
+  top: 0; right: 0;
+  width: 360px;
+  height: 100vh;
+  background: #0a1a28;
+  border-left: 1px solid rgba(20,189,235,.18);
+  box-shadow: -6px 0 28px rgba(0,0,0,.35);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.wdb-panel.open { transform: translateX(0); }
+
+.wdb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 52px;
+  border-bottom: 1px solid rgba(20,189,235,.12);
+  flex-shrink: 0;
+  background: rgba(3,43,67,.6);
+}
+.wdb-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--cyan);
+}
+.wdb-close {
+  width: 28px; height: 28px;
+  border-radius: 6px; border: 1px solid rgba(255,255,255,.1);
+  background: transparent; color: var(--grey);
+  cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s, color .12s;
+}
+.wdb-close:hover { background: rgba(255,255,255,.08); color: var(--light); }
+
+.wdb-search-wrap {
+  padding: 10px 14px 0;
+  flex-shrink: 0;
+}
+.wdb-search {
+  width: 100%; height: 34px;
+  padding: 0 10px 0 32px;
+  border: 1px solid rgba(20,189,235,.2);
+  border-radius: 7px;
+  background: rgba(255,255,255,.05);
+  color: var(--light);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2314BDEB' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 10px center;
+}
+.wdb-search::placeholder { color: rgba(170,170,170,.5); }
+.wdb-search:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(20,189,235,.12); }
+
+/* Add waypoint form */
+.wdb-add-section {
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(20,189,235,.08);
+  flex-shrink: 0;
+}
+.wdb-add-toggle {
+  width: 100%; height: 30px;
+  border-radius: 6px; border: 1px dashed rgba(20,189,235,.3);
+  background: transparent; color: rgba(20,189,235,.6);
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;
+  transition: border-color .12s, color .12s, background .12s;
+}
+.wdb-add-toggle:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(20,189,235,.06); }
+.wdb-add-form {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wdb-add-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.wdb-input {
+  height: 30px; padding: 0 8px;
+  border: 1px solid rgba(20,189,235,.2); border-radius: 6px;
+  background: rgba(255,255,255,.05); color: var(--light);
+  font-size: 12px; font-family: inherit; outline: none;
+  transition: border-color .15s;
+  width: 100%;
+}
+.wdb-input::placeholder { color: rgba(170,170,170,.4); }
+.wdb-input:focus { border-color: var(--cyan); }
+.wdb-input.mono { font-family: 'IBM Plex Mono','Consolas',monospace; }
+.wdb-add-submit {
+  height: 30px; border-radius: 6px;
+  border: none; background: var(--cyan); color: var(--navy);
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: background .12s;
+}
+.wdb-add-submit:hover { background: #0fa8d4; }
+.wdb-add-err { font-size: 11px; color: #f87171; padding: 2px 0; }
+
+/* Waypoint list */
+.wdb-list-wrap { flex: 1; overflow-y: auto; padding: 8px 0 16px; }
+.wdb-list-wrap::-webkit-scrollbar { width: 5px; }
+.wdb-list-wrap::-webkit-scrollbar-track { background: transparent; }
+.wdb-list-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 3px; }
+
+.wdb-group-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+  color: rgba(170,170,170,.5); padding: 10px 14px 4px;
+}
+.wdb-item {
+  display: flex; align-items: center;
+  padding: 7px 14px;
+  gap: 10px;
+  cursor: default;
+  transition: background .1s;
+  border-bottom: 1px solid rgba(255,255,255,.03);
+}
+.wdb-item:hover { background: rgba(20,189,235,.06); }
+.wdb-item-code {
+  font-family: 'IBM Plex Mono','Consolas',monospace;
+  font-size: 12px; font-weight: 700; color: var(--cyan);
+  width: 56px; flex-shrink: 0;
+}
+.wdb-item-info { flex: 1; min-width: 0; }
+.wdb-item-name { font-size: 11px; color: var(--light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wdb-item-coords { font-family: 'IBM Plex Mono','Consolas',monospace; font-size: 10px; color: rgba(170,170,170,.6); margin-top: 1px; }
+.wdb-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.wdb-use-btn {
+  height: 24px; padding: 0 8px;
+  border-radius: 5px; border: 1px solid rgba(20,189,235,.3);
+  background: rgba(20,189,235,.08); color: var(--cyan);
+  font-size: 11px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: background .1s;
+  white-space: nowrap;
+}
+.wdb-use-btn:hover { background: rgba(20,189,235,.2); }
+.wdb-del-btn {
+  width: 24px; height: 24px;
+  border-radius: 5px; border: 1px solid rgba(255,255,255,.08);
+  background: transparent; color: rgba(170,170,170,.5);
+  font-size: 11px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .1s, color .1s;
+}
+.wdb-del-btn:hover { background: rgba(239,68,68,.15); color: #f87171; border-color: rgba(239,68,68,.3); }
+.wdb-empty { font-size: 11px; color: rgba(170,170,170,.4); font-style: italic; padding: 12px 14px; }
+
+/* Tip bar at bottom of WDB */
+.wdb-tip {
+  padding: 8px 14px;
+  border-top: 1px solid rgba(20,189,235,.08);
+  font-size: 10px;
+  color: rgba(170,170,170,.4);
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+.wdb-tip b { color: rgba(20,189,235,.6); }
+
+/* ─── Autocomplete Dropdown ──────────────────────────────────────────── */
+#suggest-drop {
+  position: fixed;
+  z-index: 500;
+  background: #0e1e2c;
+  border: 1px solid rgba(20,189,235,.3);
+  border-radius: 7px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.35);
+  overflow: hidden;
+  min-width: 260px;
+  max-height: 220px;
+  overflow-y: auto;
+  display: none;
+}
+#suggest-drop.visible { display: block; }
+#suggest-drop::-webkit-scrollbar { width: 4px; }
+#suggest-drop::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
+.suggest-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; cursor: pointer;
+  transition: background .1s;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.suggest-item:last-child { border-bottom: none; }
+.suggest-item:hover, .suggest-item.active { background: rgba(20,189,235,.12); }
+.suggest-code { font-family: 'IBM Plex Mono','Consolas',monospace; font-size: 12px; font-weight: 700; color: var(--cyan); width: 52px; flex-shrink: 0; }
+.suggest-info { flex: 1; min-width: 0; }
+.suggest-name { font-size: 11px; color: var(--light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggest-coords { font-family: 'IBM Plex Mono','Consolas',monospace; font-size: 10px; color: rgba(170,170,170,.55); }
+
+/* ─── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; padding: 12px; gap: 14px; }
+  .right-col { position: static; height: 380px; }
+  .form-row.cols-4 { grid-template-columns: 1fr 1fr; }
+  .wdb-panel { width: 100%; }
+}
+@media (max-width: 540px) {
+  .form-row.cols-2, .form-row.cols-4 { grid-template-columns: 1fr; }
+  .route-item-main { flex-wrap: wrap; }
+}
+
+/* ─── Misc ───────────────────────────────────────────────────────────── */
+.empty-hint { font-size: 11px; color: var(--grey); font-style: italic; text-align: center; padding: 10px 0 4px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ HEADER ═══ -->
+<header class="header">
+  <div class="header-left">
+    <svg width="22" height="22" viewBox="0 0 26 26" fill="none">
+      <circle cx="13" cy="13" r="11" stroke="#14BDEB" stroke-width="1.4" fill="none" opacity=".7"/>
+      <line x1="13" y1="2" x2="13" y2="5.5" stroke="#14BDEB" stroke-width="1.4"/>
+      <line x1="13" y1="20.5" x2="13" y2="24" stroke="#14BDEB" stroke-width="1.4"/>
+      <line x1="2" y1="13" x2="5.5" y2="13" stroke="#14BDEB" stroke-width="1.4"/>
+      <line x1="20.5" y1="13" x2="24" y2="13" stroke="#14BDEB" stroke-width="1.4"/>
+      <circle cx="13" cy="13" r="5.5" stroke="#14BDEB" stroke-width="1" fill="none" opacity=".4"/>
+      <path d="M13 8.5 L17 13 L13 17.5 L9 13 Z" fill="#14BDEB"/>
+      <circle cx="13" cy="13" r="1.5" fill="#032B43"/>
+    </svg>
+    <span class="header-logo-label"><span>SKY</span>PLOT</span>
+    <span class="header-sub">Mission Builder</span>
+    <span class="header-mission-count" id="header-mission-count"></span>
+  </div>
+  <div class="header-right">
+    <button class="btn-wdb-toggle" id="wdb-toggle-btn" onclick="toggleWDB()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Waypoints DB
+    </button>
+    <button class="btn primary" onclick="downloadCSV()">&#8595;&nbsp; Download CSV</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════ LAYOUT ════ -->
+<div class="layout">
+
+  <!-- ── LEFT COLUMN ── -->
+  <div class="left-col">
+
+    <!-- Mission Tabs -->
+    <div class="mission-tabs-card">
+      <span class="tabs-label">Missions</span>
+      <div class="tabs-scroll" id="tabs-scroll"></div>
+      <button class="btn-add-mission" onclick="addMission()">＋ Add Mission</button>
+    </div>
+
+    <!-- Card 1: Mission Details -->
+    <div class="card">
+      <div class="section-header">Mission Details</div>
+      <div class="form-grid">
+
+        <div class="form-row cols-1">
+          <div class="form-group">
+            <label class="form-label">Callsign</label>
+            <input class="input" id="callsign" type="text" placeholder="e.g. FALCON 1"
+              oninput="M().callsign=this.value.trim();renderTabs();updatePreview()">
+          </div>
+        </div>
+
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label class="form-label">Aircraft Type</label>
+            <input class="input" id="acftType" type="text" placeholder="e.g. F/A-18"
+              oninput="M().acftType=this.value.trim();updatePreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">No. of Aircraft</label>
+            <input class="input" id="acftCount" type="number" min="1" value="1"
+              oninput="M().acftCount=parseInt(this.value)||1;updatePreview()">
+          </div>
+        </div>
+
+        <div class="form-row cols-4">
+          <div class="form-group">
+            <label class="form-label">Dep ICAO</label>
+            <input class="input" id="depICAO" type="text" placeholder="WSSS" maxlength="4"
+              style="text-transform:uppercase"
+              oninput="M().depICAO=this.value.trim().toUpperCase();updatePreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ETD</label>
+            <input class="input mono" id="etd" type="text" placeholder="0000H" maxlength="5"
+              oninput="M().etd=this.value.trim();updatePreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Arr ICAO</label>
+            <input class="input" id="arrICAO" type="text" placeholder="WSSS" maxlength="4"
+              style="text-transform:uppercase"
+              oninput="M().arrICAO=this.value.trim().toUpperCase();updatePreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ETA</label>
+            <input class="input mono" id="eta" type="text" placeholder="0000H" maxlength="5"
+              oninput="M().eta=this.value.trim();updatePreview()">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mission Colour</label>
+          <div class="swatch-row" id="swatch-row"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Card 2: Route -->
+    <div class="card">
+      <div class="section-header">
+        Route
+        <div class="section-actions">
+          <button class="btn" onclick="addPoint()">+ Point</button>
+          <button class="btn" onclick="addAO()">+ AO</button>
+        </div>
+      </div>
+      <div class="route-list" id="route-list">
+        <p class="empty-hint" id="route-empty">No route points yet — add a Point or AO</p>
+      </div>
+    </div>
+
+    <!-- Clear All -->
+    <div class="clear-section">
+      <button class="btn danger" onclick="clearAll()">Clear All Missions</button>
+      <p class="clear-hint">Resets all missions to a single blank mission</p>
+    </div>
+
+  </div><!-- /left-col -->
+
+  <!-- ── RIGHT COLUMN ── -->
+  <div class="right-col">
+    <div class="preview-card">
+      <div class="preview-header">
+        <div style="display:flex;align-items:center">
+          <span class="preview-title">CSV Preview</span>
+          <span class="preview-mission-badge" id="preview-badge"></span>
+        </div>
+        <button class="btn-copy" onclick="copyCSV()">Copy</button>
+      </div>
+      <div class="preview-body">
+        <pre id="csv-preview"></pre>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /layout -->
+
+<!-- ═══════════════════════════════════════ WAYPOINT DB PANEL ══════════ -->
+<div class="wdb-overlay" id="wdb-overlay" onclick="closeWDB()"></div>
+
+<div class="wdb-panel" id="wdb-panel">
+  <div class="wdb-header">
+    <span class="wdb-title">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:5px"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      Waypoint Database
+    </span>
+    <button class="wdb-close" onclick="closeWDB()">✕</button>
+  </div>
+
+  <div class="wdb-search-wrap">
+    <input class="wdb-search" id="wdb-search" placeholder="Search code or name…" oninput="renderWDB()" autocomplete="off">
+  </div>
+
+  <div class="wdb-add-section">
+    <button class="wdb-add-toggle" id="wdb-add-toggle" onclick="toggleWDBForm()">＋ Add Custom Waypoint</button>
+    <div id="wdb-add-form" style="display:none" class="wdb-add-form">
+      <div class="wdb-add-row">
+        <input class="wdb-input" id="wdb-new-code" placeholder="Code (e.g. ALPHA)" maxlength="8" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        <input class="wdb-input" id="wdb-new-name" placeholder="Description / name">
+      </div>
+      <div class="wdb-add-row">
+        <input class="wdb-input mono" id="wdb-new-lat" placeholder="012133.16N">
+        <input class="wdb-input mono" id="wdb-new-lon" placeholder="1035921.57E">
+      </div>
+      <div id="wdb-add-err" class="wdb-add-err" style="display:none"></div>
+      <button class="wdb-add-submit" onclick="submitAddWaypoint()">Add to Database</button>
+    </div>
+  </div>
+
+  <div class="wdb-list-wrap" id="wdb-list"></div>
+
+  <div class="wdb-tip">
+    <b>Tip:</b> Type a waypoint code in any label field to see suggestions, or click <b>Use</b> after focusing a label input.
+  </div>
+</div>
+
+<!-- Autocomplete dropdown (shared, floated) -->
+<div id="suggest-drop"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// CONSTANTS & STATE
+// ═══════════════════════════════════════════════════════════════════════
+
+const COLORS = [
+  '#14BDEB','#f59e0b','#10b981','#f43f5e',
+  '#8b5cf6','#fb923c','#06b6d4','#84cc16',
+  '#888888','#1a1a1a'
+];
+
+function uid() { return Math.random().toString(36).slice(2, 9); }
+
+// ── Waypoint database ──────────────────────────────────────────────────
+const BUILTIN_WAYPOINTS = [
+  // Singapore
+  { code:'WSSS', name:'Singapore Changi Airport',              lat:'012133.16N', lon:'1035921.57E' },
+  { code:'WSSL', name:'Singapore Seletar Airport',             lat:'012540N',    lon:'1035228E'    },
+  { code:'WSAP', name:'Paya Lebar Air Base',                   lat:'012114N',    lon:'1035414E'    },
+  { code:'WSAT', name:'Tengah Air Base',                       lat:'012145N',    lon:'1034145E'    },
+  // Malaysia
+  { code:'WMKJ', name:'Johor Bahru Senai Airport',             lat:'013803N',    lon:'1034223E'    },
+  { code:'WMKK', name:'Kuala Lumpur KLIA',                     lat:'025432N',    lon:'1014225E'    },
+  { code:'WMKF', name:'Subang Sultan Abdul Aziz Shah Airport', lat:'030630N',    lon:'1013325E'    },
+  { code:'WMKB', name:'Butterworth Air Base',                  lat:'051845N',    lon:'1001823E'    },
+  { code:'WMBT', name:'Kota Bharu Airport',                    lat:'060938N',    lon:'1021645E'    },
+  { code:'WMKC', name:'Kota Bharu Air Base',                   lat:'060947N',    lon:'1021705E'    },
+  { code:'WBKK', name:'Kota Kinabalu Airport',                 lat:'055646N',    lon:'1160258E'    },
+  { code:'WBGG', name:'Kuching Airport',                       lat:'012938N',    lon:'1101956E'    },
+  // Indonesia
+  { code:'WIDD', name:'Batam Hang Nadim Airport',              lat:'010743N',    lon:'1040708E'    },
+  { code:'WIPA', name:'Tanjung Pinang Raja Haji Fisabilillah', lat:'005522N',    lon:'1043200E'    },
+  { code:'WIMM', name:'Medan Kualanamu Airport',               lat:'033845N',    lon:'0983235E'    },
+  { code:'WIHH', name:'Jakarta Halim Perdanakusuma Airport',   lat:'061617S',    lon:'1065307E'    },
+  { code:'WIII', name:'Jakarta Soekarno-Hatta Airport',        lat:'060711S',    lon:'1064004E'    },
+  // Philippines
+  { code:'RPLL', name:'Manila Ninoy Aquino Airport',           lat:'143047N',    lon:'1210122E'    },
+  { code:'RPVP', name:'Puerto Princesa Airport',               lat:'094449N',    lon:'1183519E'    },
+  // Thailand
+  { code:'VTBS', name:'Bangkok Suvarnabhumi Airport',          lat:'134135N',    lon:'1005457E'    },
+  { code:'VTBD', name:'Bangkok Don Mueang Airport',            lat:'134916N',    lon:'1003551E'    },
+  // Nav fixes (Singapore FIR)
+  { code:'PASPU', name:'PASPU Waypoint (SG FIR)',              lat:'010600N',    lon:'1040000E'    },
+  { code:'DUDIS', name:'DUDIS Waypoint (SG FIR)',              lat:'013000N',    lon:'1042000E'    },
+  { code:'LENDA', name:'LENDA Waypoint (SG FIR)',              lat:'020000N',    lon:'1035000E'    },
+  { code:'SAMKO', name:'SAMKO Waypoint (SG FIR)',              lat:'013000N',    lon:'1030000E'    },
+  { code:'PARDI', name:'PARDI Waypoint (SG FIR)',              lat:'020000N',    lon:'1025000E'    },
+];
+
+// Custom waypoints — persisted to localStorage
+let customWaypoints = [];
+(function loadCustom() {
+  try {
+    const saved = localStorage.getItem('skyplot_wdb_custom');
+    if (saved) customWaypoints = JSON.parse(saved);
+  } catch(e) { customWaypoints = []; }
+})();
+
+function saveCustom() {
+  try { localStorage.setItem('skyplot_wdb_custom', JSON.stringify(customWaypoints)); } catch(e) {}
+}
+
+function allWaypoints() {
+  return [...BUILTIN_WAYPOINTS, ...customWaypoints];
+}
+
+function findWaypoint(code) {
+  return allWaypoints().find(w => w.code === code.trim().toUpperCase());
+}
+
+// ── Mission state ──────────────────────────────────────────────────────
+function newMission(colorIdx) {
+  return {
+    id: uid(),
+    callsign: '', acftType: '', acftCount: 1,
+    depICAO: '', etd: '', arrICAO: '', eta: '',
+    color: COLORS[colorIdx % COLORS.length],
+    route: [],
+  };
+}
+
+const S = { missions: [newMission(0)], active: 0 };
+function M() { return S.missions[S.active]; }
+
+// ── Last focused label tracker (for WDB "Use") ────────────────────────
+let _lastLabelFocus = null; // { routeId } or null
+
+// ═══════════════════════════════════════════════════════════════════════
+// COORDINATE VALIDATION  (supports decimal seconds: 012133.16N / 1035921.57E)
+// ═══════════════════════════════════════════════════════════════════════
+
+function validCoord(val, isLon) {
+  if (!val) return true;
+  val = val.trim().toUpperCase();
+  if (isLon) return /^\d{6,7}(\.\d+)?[EW]$/.test(val);
+  return /^\d{5,6}(\.\d+)?[NS]$/.test(val);
+}
+
+function applyCoordValidation(input, isLon) {
+  const val = input.value.trim();
+  if (val && !validCoord(val, isLon)) input.classList.add('error');
+  else input.classList.remove('error');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MISSION MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════
+
+function addMission() {
+  S.missions.push(newMission(S.missions.length));
+  S.active = S.missions.length - 1;
+  reloadFormInputs(); renderAll(); updatePreview();
+}
+
+function removeMission(idx) {
+  if (S.missions.length <= 1) { alert('At least one mission is required.'); return; }
+  const name = S.missions[idx].callsign || 'Mission ' + (idx + 1);
+  if (!confirm(`Remove "${name}"? This cannot be undone.`)) return;
+  S.missions.splice(idx, 1);
+  if (S.active >= S.missions.length) S.active = S.missions.length - 1;
+  reloadFormInputs(); renderAll(); updatePreview();
+}
+
+function setActiveMission(idx) {
+  if (idx === S.active) return;
+  S.active = idx;
+  reloadFormInputs(); renderAll(); updatePreview();
+}
+
+function reloadFormInputs() {
+  const m = M();
+  document.getElementById('callsign').value  = m.callsign;
+  document.getElementById('acftType').value  = m.acftType;
+  document.getElementById('acftCount').value = m.acftCount;
+  document.getElementById('depICAO').value   = m.depICAO;
+  document.getElementById('etd').value       = m.etd;
+  document.getElementById('arrICAO').value   = m.arrICAO;
+  document.getElementById('eta').value       = m.eta;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// COLOR SWATCHES
+// ═══════════════════════════════════════════════════════════════════════
+
+function renderSwatches() {
+  const m = M();
+  const row = document.getElementById('swatch-row');
+  row.innerHTML = '';
+  COLORS.forEach(c => {
+    const s = document.createElement('div');
+    s.className = 'swatch' + (c === m.color ? ' selected' : '');
+    s.style.background = c; s.style.borderColor = c;
+    if (c === m.color) s.style.boxShadow = `0 0 0 2px #fff inset, 0 0 0 3.5px ${c}`;
+    s.title = c;
+    s.onclick = () => { M().color = c; renderAll(); updatePreview(); };
+    row.appendChild(s);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MISSION TABS
+// ═══════════════════════════════════════════════════════════════════════
+
+function renderTabs() {
+  const scroll = document.getElementById('tabs-scroll');
+  scroll.innerHTML = '';
+  const canRemove = S.missions.length > 1;
+  S.missions.forEach((m, i) => {
+    const tab = document.createElement('div');
+    tab.className = 'mission-tab' + (i === S.active ? ' active' : '');
+    tab.innerHTML = `
+      <div class="tab-color-dot" style="background:${m.color}"></div>
+      <span>${esc(m.callsign || 'Mission ' + (i + 1))}</span>
+      ${canRemove ? `<button class="tab-remove" title="Remove" onclick="event.stopPropagation();removeMission(${i})">✕</button>` : ''}
+    `;
+    tab.addEventListener('click', () => setActiveMission(i));
+    scroll.appendChild(tab);
+  });
+  document.getElementById('header-mission-count').textContent = S.missions.length > 1 ? `${S.missions.length} missions` : '';
+  document.getElementById('preview-badge').textContent = S.missions.length > 1 ? `— all ${S.missions.length} missions` : '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ADD / REMOVE ROUTE ITEMS
+// ═══════════════════════════════════════════════════════════════════════
+
+function addPoint() {
+  M().route.push({ id: uid(), type: 'point', label: '', lat: '', lon: '', totEarly: '', totLate: '' });
+  renderAll(); updatePreview();
+}
+
+function addAO() {
+  M().route.push({ id: uid(), type: 'ao', label: '', totEarly: '', totLate: '', vertices: [] });
+  renderAll(); updatePreview();
+}
+
+function removeRoute(id) {
+  M().route = M().route.filter(r => r.id !== id);
+  renderAll(); updatePreview();
+}
+
+function addVertex(routeId) {
+  const item = M().route.find(r => r.id === routeId);
+  if (item) item.vertices.push({ id: uid(), lat: '', lon: '' });
+  renderAll(); updatePreview();
+}
+
+function removeVertex(routeId, vtxId) {
+  const item = M().route.find(r => r.id === routeId);
+  if (item) item.vertices = item.vertices.filter(v => v.id !== vtxId);
+  renderAll(); updatePreview();
+}
+
+function moveItem(arr, idx, dir) {
+  const ni = idx + dir;
+  if (ni < 0 || ni >= arr.length) return;
+  const tmp = arr[idx]; arr[idx] = arr[ni]; arr[ni] = tmp;
+}
+function moveRoute(idx, dir) { moveItem(M().route, idx, dir); renderAll(); updatePreview(); }
+
+// ═══════════════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════════════
+
+function renderAll() { renderTabs(); renderSwatches(); renderRoute(); }
+
+function renderRoute() {
+  const list  = document.getElementById('route-list');
+  const empty = document.getElementById('route-empty');
+  Array.from(list.querySelectorAll('.route-item')).forEach(el => el.remove());
+  if (M().route.length === 0) { empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  M().route.forEach((item, idx) => {
+    const el = document.createElement('div');
+    el.className = 'route-item' + (item.type === 'ao' ? ' ao-type' : '');
+    el.dataset.id = item.id;
+    el.innerHTML = item.type === 'point' ? buildPointHTML(item, idx) : buildAOItemHTML(item, idx);
+    list.appendChild(el);
+    attachRouteListeners(el, item);
+  });
+}
+
+const LAT_PH = '012133.16N';
+const LON_PH = '1035921.57E';
+
+function buildPointHTML(item, idx) {
+  const c = M().color;
+  return `
+    <div class="route-item-main">
+      <div class="item-dot" style="background:${c}"></div>
+      <input class="input route-label" type="text" placeholder="Waypoint / code"
+        value="${esc(item.label)}" data-field="label" data-id="${item.id}" autocomplete="off">
+      <input class="input mono" type="text" style="width:106px" placeholder="${LAT_PH}"
+        value="${esc(item.lat)}" data-field="lat" data-id="${item.id}" data-islon="false">
+      <input class="input mono" type="text" style="width:118px" placeholder="${LON_PH}"
+        value="${esc(item.lon)}" data-field="lon" data-id="${item.id}" data-islon="true">
+      <input class="input mono" type="text" style="width:68px" placeholder="0700H"
+        value="${esc(item.totEarly)}" data-field="totEarly" data-id="${item.id}">
+      <span class="tot-sep">—</span>
+      <input class="input mono" type="text" style="width:68px" placeholder="0715H"
+        value="${esc(item.totLate)}" data-field="totLate" data-id="${item.id}">
+      <div class="item-actions">
+        <button class="btn icon" title="Move up"   onclick="moveRoute(${idx},-1)">↑</button>
+        <button class="btn icon" title="Move down" onclick="moveRoute(${idx},1)">↓</button>
+        <button class="btn icon danger" title="Remove" onclick="removeRoute('${item.id}')">✕</button>
+      </div>
+    </div>
+  `;
+}
+
+function buildAOItemHTML(item, idx) {
+  const c = M().color;
+  let vtxHTML = '';
+  item.vertices.forEach((v, vi) => {
+    vtxHTML += `
+      <div class="vertex-row">
+        <span class="vertex-num">${vi + 1}.</span>
+        <input class="input mono" type="text" style="width:106px" placeholder="${LAT_PH}"
+          value="${esc(v.lat)}" data-vtx-field="lat" data-vtx-id="${v.id}" data-route-id="${item.id}" data-islon="false">
+        <input class="input mono" type="text" style="width:118px" placeholder="${LON_PH}"
+          value="${esc(v.lon)}" data-vtx-field="lon" data-vtx-id="${v.id}" data-route-id="${item.id}" data-islon="true">
+        <button class="btn icon danger" title="Remove vertex" onclick="removeVertex('${item.id}','${v.id}')">✕</button>
+      </div>
+    `;
+  });
+  const warnHTML = item.vertices.length > 0 && item.vertices.length < 3
+    ? `<div class="vertex-warn">&#9888; At least 3 vertices required</div>` : '';
+  return `
+    <div class="route-item-main">
+      <div class="item-square-ao" style="background:${c}"></div>
+      <input class="input route-label" type="text" placeholder="AO label / code"
+        value="${esc(item.label)}" data-field="label" data-id="${item.id}" autocomplete="off">
+      <input class="input mono" type="text" style="width:68px" placeholder="0700H"
+        value="${esc(item.totEarly)}" data-field="totEarly" data-id="${item.id}">
+      <span class="tot-sep">—</span>
+      <input class="input mono" type="text" style="width:68px" placeholder="0715H"
+        value="${esc(item.totLate)}" data-field="totLate" data-id="${item.id}">
+      <div class="item-actions">
+        <button class="btn icon" title="Move up"   onclick="moveRoute(${idx},-1)">↑</button>
+        <button class="btn icon" title="Move down" onclick="moveRoute(${idx},1)">↓</button>
+        <button class="btn icon danger" title="Remove" onclick="removeRoute('${item.id}')">✕</button>
+      </div>
+    </div>
+    <div class="vertices-section">
+      <div class="vertices-header">
+        Vertices
+        <button class="btn" style="height:22px;font-size:11px;padding:0 8px" onclick="addVertex('${item.id}')">+ Vertex</button>
+      </div>
+      ${vtxHTML || '<div style="font-size:11px;color:#aaa;font-style:italic;padding:2px 0 4px">No vertices — add at least 3</div>'}
+      ${warnHTML}
+    </div>
+  `;
+}
+
+function attachRouteListeners(el, item) {
+  // Route-level fields
+  el.querySelectorAll('[data-field]').forEach(input => {
+    input.addEventListener('input', () => {
+      const ri = M().route.find(r => r.id === input.dataset.id);
+      if (!ri) return;
+      ri[input.dataset.field] = input.value;
+      updatePreview();
+      if (input.dataset.field === 'label') showSuggest(input, item.id);
+    });
+    if (input.dataset.islon !== undefined) {
+      input.addEventListener('input', () => applyCoordValidation(input, input.dataset.islon === 'true'));
+      input.addEventListener('blur',  () => applyCoordValidation(input, input.dataset.islon === 'true'));
+    }
+    if (input.dataset.field === 'label') {
+      input.addEventListener('focus', () => { _lastLabelFocus = { routeId: item.id }; });
+      input.addEventListener('blur',  () => { setTimeout(hideSuggest, 160); });
+    }
+  });
+  // Vertex fields
+  el.querySelectorAll('[data-vtx-field]').forEach(input => {
+    input.addEventListener('input', () => {
+      const ri = M().route.find(r => r.id === input.dataset.routeId);
+      if (!ri) return;
+      const vtx = ri.vertices.find(v => v.id === input.dataset.vtxId);
+      if (!vtx) return;
+      vtx[input.dataset.vtxField] = input.value;
+      updatePreview();
+    });
+    input.addEventListener('input', () => applyCoordValidation(input, input.dataset.islon === 'true'));
+    input.addEventListener('blur',  () => applyCoordValidation(input, input.dataset.islon === 'true'));
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CSV GENERATION
+// ═══════════════════════════════════════════════════════════════════════
+
+function tr(v) { return (v || '').trim(); }
+
+function missionToLines(m) {
+  const lines = [];
+  lines.push([tr(m.callsign), tr(m.acftType), tr(String(m.acftCount)),
+    tr(m.depICAO), tr(m.etd), tr(m.arrICAO), tr(m.eta), tr(m.color)].join(','));
+  m.route.forEach(item => {
+    if (item.type === 'point') {
+      const parts = [tr(item.label), tr(item.lat), tr(item.lon), tr(item.totEarly)];
+      if (tr(item.totLate)) parts.push(tr(item.totLate));
+      lines.push(parts.join(','));
+    } else {
+      const parts = ['AOWPT:' + tr(item.label), tr(item.totEarly)];
+      if (tr(item.totLate)) parts.push(tr(item.totLate));
+      lines.push(parts.join(','));
+      item.vertices.forEach(v => lines.push(['AOVTX:' + tr(v.lat), tr(v.lon)].join(',')));
+    }
+  });
+  return lines;
+}
+
+function generateCSV() {
+  return S.missions.map(m => missionToLines(m).join('\n')).join('\n\n');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CSV PREVIEW
+// ═══════════════════════════════════════════════════════════════════════
+
+function updatePreview() {
+  const el = document.getElementById('csv-preview');
+  const hasContent = S.missions.some(m => tr(m.callsign) || tr(m.acftType) || m.route.length);
+  if (!hasContent) { el.innerHTML = '<span class="csv-hint"># Fill in mission details to see CSV preview...</span>'; return; }
+  const lines = generateCSV().split('\n');
+  let prevBlank = true;
+  el.innerHTML = lines.map(line => {
+    if (!line) { prevBlank = true; return '<span class="csv-sep"> </span>'; }
+    const isHeader = prevBlank; prevBlank = false;
+    if (line.startsWith('#'))      return `<span class="csv-comment">${escHtml(line)}</span>`;
+    if (isHeader)                  return `<span class="csv-mission">${escHtml(line)}</span>`;
+    if (line.startsWith('AOWPT:')) return `<span class="csv-aowpt">${escHtml(line)}</span>`;
+    if (line.startsWith('AOVTX:')) return `<span class="csv-aovtx">${escHtml(line)}</span>`;
+    return `<span class="csv-point">${escHtml(line)}</span>`;
+  }).join('\n');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// DOWNLOAD & COPY
+// ═══════════════════════════════════════════════════════════════════════
+
+function downloadCSV() {
+  if (!S.missions.some(m => tr(m.callsign))) { alert('Please enter a callsign for at least one mission.'); return; }
+  const badAO = [];
+  S.missions.forEach(m => m.route.filter(r => r.type === 'ao' && r.vertices.length < 3).forEach(r => {
+    badAO.push(`"${r.label || '(unnamed)'}" in ${m.callsign || '(unnamed)'}`);
+  }));
+  if (badAO.length && !confirm(`AO waypoints with fewer than 3 vertices: ${badAO.join(', ')}.\n\nDownload anyway?`)) return;
+  const csv = generateCSV();
+  const fname = S.missions.length === 1
+    ? tr(S.missions[0].callsign).replace(/\s+/g, '_') + '_mission.csv'
+    : 'missions.csv';
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function copyCSV() {
+  const csv = generateCSV();
+  const btn = document.querySelector('.btn-copy');
+  const orig = btn.textContent;
+  const ok = () => { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = orig; }, 1500); };
+  if (navigator.clipboard) navigator.clipboard.writeText(csv).then(ok).catch(() => { fallbackCopy(csv); ok(); });
+  else { fallbackCopy(csv); ok(); }
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CLEAR ALL
+// ═══════════════════════════════════════════════════════════════════════
+
+function clearAll() {
+  if (!confirm('Clear all missions and start fresh? This cannot be undone.')) return;
+  S.missions = [newMission(0)]; S.active = 0;
+  reloadFormInputs(); renderAll(); updatePreview();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// WAYPOINT DATABASE PANEL
+// ═══════════════════════════════════════════════════════════════════════
+
+let _wdbOpen = false;
+
+function toggleWDB() {
+  _wdbOpen ? closeWDB() : openWDB();
+}
+function openWDB() {
+  _wdbOpen = true;
+  document.getElementById('wdb-panel').classList.add('open');
+  document.getElementById('wdb-overlay').classList.add('open');
+  document.getElementById('wdb-toggle-btn').classList.add('active');
+  renderWDB();
+}
+function closeWDB() {
+  _wdbOpen = false;
+  document.getElementById('wdb-panel').classList.remove('open');
+  document.getElementById('wdb-overlay').classList.remove('open');
+  document.getElementById('wdb-toggle-btn').classList.remove('active');
+}
+
+// Stop overlay click propagating into panel
+document.getElementById('wdb-panel').addEventListener('click', e => e.stopPropagation());
+
+let _wdbFormOpen = false;
+function toggleWDBForm() {
+  _wdbFormOpen = !_wdbFormOpen;
+  document.getElementById('wdb-add-form').style.display = _wdbFormOpen ? 'flex' : 'none';
+  document.getElementById('wdb-add-toggle').textContent = _wdbFormOpen ? '▲ Cancel' : '＋ Add Custom Waypoint';
+  if (!_wdbFormOpen) clearWDBForm();
+}
+function clearWDBForm() {
+  ['wdb-new-code','wdb-new-name','wdb-new-lat','wdb-new-lon'].forEach(id => document.getElementById(id).value = '');
+  const err = document.getElementById('wdb-add-err');
+  err.style.display = 'none'; err.textContent = '';
+}
+function showWDBErr(msg) {
+  const err = document.getElementById('wdb-add-err');
+  err.textContent = msg; err.style.display = 'block';
+}
+
+function submitAddWaypoint() {
+  const code = document.getElementById('wdb-new-code').value.trim().toUpperCase();
+  const name = document.getElementById('wdb-new-name').value.trim();
+  const lat  = document.getElementById('wdb-new-lat').value.trim().toUpperCase();
+  const lon  = document.getElementById('wdb-new-lon').value.trim().toUpperCase();
+
+  if (!code) return showWDBErr('Code is required.');
+  if (code.length < 2) return showWDBErr('Code must be at least 2 characters.');
+  if (allWaypoints().find(w => w.code === code)) return showWDBErr(`Code "${code}" already exists.`);
+  if (lat && !validCoord(lat, false)) return showWDBErr('Latitude format invalid (e.g. 012133.16N).');
+  if (lon && !validCoord(lon, true))  return showWDBErr('Longitude format invalid (e.g. 1035921.57E).');
+
+  customWaypoints.push({ code, name: name || code, lat: lat || '', lon: lon || '', custom: true });
+  saveCustom();
+  clearWDBForm();
+  toggleWDBForm();
+  renderWDB();
+}
+
+function deleteCustomWaypoint(code) {
+  if (!confirm(`Remove "${code}" from custom waypoints?`)) return;
+  customWaypoints = customWaypoints.filter(w => w.code !== code);
+  saveCustom();
+  renderWDB();
+}
+
+function renderWDB() {
+  const q = (document.getElementById('wdb-search').value || '').trim().toUpperCase();
+  const list = document.getElementById('wdb-list');
+  list.innerHTML = '';
+
+  const match = wp => !q || wp.code.includes(q) || wp.name.toUpperCase().includes(q);
+  const builtinFiltered = BUILTIN_WAYPOINTS.filter(match);
+  const customFiltered  = customWaypoints.filter(match);
+
+  function mkItem(wp) {
+    const div = document.createElement('div');
+    div.className = 'wdb-item';
+    div.innerHTML = `
+      <div class="wdb-item-code">${esc(wp.code)}</div>
+      <div class="wdb-item-info">
+        <div class="wdb-item-name">${esc(wp.name)}</div>
+        <div class="wdb-item-coords">${esc(wp.lat || '—')} &nbsp; ${esc(wp.lon || '—')}</div>
+      </div>
+      <div class="wdb-item-actions">
+        <button class="wdb-use-btn" title="Fill into last focused label">Use</button>
+        ${wp.custom ? `<button class="wdb-del-btn" title="Delete">✕</button>` : ''}
+      </div>
+    `;
+    div.querySelector('.wdb-use-btn').addEventListener('click', () => useWaypoint(wp));
+    if (wp.custom) div.querySelector('.wdb-del-btn').addEventListener('click', () => deleteCustomWaypoint(wp.code));
+    return div;
+  }
+
+  if (builtinFiltered.length) {
+    const lbl = document.createElement('div');
+    lbl.className = 'wdb-group-label';
+    lbl.textContent = `Built-in (${builtinFiltered.length})`;
+    list.appendChild(lbl);
+    builtinFiltered.forEach(wp => list.appendChild(mkItem(wp)));
+  }
+
+  if (customFiltered.length) {
+    const lbl = document.createElement('div');
+    lbl.className = 'wdb-group-label';
+    lbl.textContent = `Custom (${customFiltered.length})`;
+    list.appendChild(lbl);
+    customFiltered.forEach(wp => list.appendChild(mkItem(wp)));
+  }
+
+  if (!builtinFiltered.length && !customFiltered.length) {
+    const empty = document.createElement('div');
+    empty.className = 'wdb-empty';
+    empty.textContent = q ? `No waypoints match "${q}"` : 'No waypoints yet';
+    list.appendChild(empty);
+  }
+}
+
+function useWaypoint(wp) {
+  if (!_lastLabelFocus) {
+    // Nothing focused yet — copy coords to clipboard as fallback
+    const text = `${wp.code}  ${wp.lat}  ${wp.lon}`;
+    if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+    alert(`Click into a route label field first, then click Use.\n\nCoords copied: ${wp.lat}  ${wp.lon}`);
+    return;
+  }
+  const ri = M().route.find(r => r.id === _lastLabelFocus.routeId);
+  if (!ri) { _lastLabelFocus = null; return; }
+
+  ri.label = wp.code;
+  if (ri.type === 'point') {
+    if (wp.lat) ri.lat = wp.lat;
+    if (wp.lon) ri.lon = wp.lon;
+  }
+  renderAll(); updatePreview();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// AUTOCOMPLETE
+// ═══════════════════════════════════════════════════════════════════════
+
+let _suggestRouteId = null;
+let _suggestIdx = -1;
+
+function showSuggest(labelInput, routeId) {
+  const q = labelInput.value.trim().toUpperCase();
+  const drop = document.getElementById('suggest-drop');
+
+  if (!q || q.length < 2) { hideSuggest(); return; }
+
+  const matches = allWaypoints().filter(w =>
+    w.code.startsWith(q) || w.name.toUpperCase().includes(q)
+  ).slice(0, 8);
+
+  if (!matches.length) { hideSuggest(); return; }
+
+  _suggestRouteId = routeId;
+  _suggestIdx = -1;
+  drop.innerHTML = '';
+
+  matches.forEach((wp, i) => {
+    const item = document.createElement('div');
+    item.className = 'suggest-item';
+    item.dataset.idx = i;
+    item.innerHTML = `
+      <div class="suggest-code">${esc(wp.code)}</div>
+      <div class="suggest-info">
+        <div class="suggest-name">${esc(wp.name)}</div>
+        <div class="suggest-coords">${esc(wp.lat || '')} ${esc(wp.lon || '')}</div>
+      </div>
+    `;
+    item.addEventListener('mousedown', e => { e.preventDefault(); selectSuggest(wp); });
+    drop.appendChild(item);
+  });
+
+  // Position below the input
+  const rect = labelInput.getBoundingClientRect();
+  drop.style.left = rect.left + 'px';
+  drop.style.top  = (rect.bottom + 4) + 'px';
+  drop.style.minWidth = Math.max(280, rect.width) + 'px';
+  drop.classList.add('visible');
+}
+
+function hideSuggest() {
+  document.getElementById('suggest-drop').classList.remove('visible');
+  _suggestRouteId = null;
+  _suggestIdx = -1;
+}
+
+function selectSuggest(wp) {
+  if (!_suggestRouteId) { hideSuggest(); return; }
+  const ri = M().route.find(r => r.id === _suggestRouteId);
+  if (!ri) { hideSuggest(); return; }
+
+  ri.label = wp.code;
+  if (ri.type === 'point') {
+    if (wp.lat) ri.lat = wp.lat;
+    if (wp.lon) ri.lon = wp.lon;
+  }
+  hideSuggest();
+  renderAll(); updatePreview();
+}
+
+// Keyboard navigation in suggest dropdown
+document.addEventListener('keydown', e => {
+  const drop = document.getElementById('suggest-drop');
+  if (!drop.classList.contains('visible')) return;
+  const items = drop.querySelectorAll('.suggest-item');
+  if (!items.length) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _suggestIdx = Math.min(_suggestIdx + 1, items.length - 1);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _suggestIdx = Math.max(_suggestIdx - 1, 0);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_suggestIdx >= 0) {
+      const all = allWaypoints().filter(w => {
+        const ri = M().route.find(r => r.id === _suggestRouteId);
+        const q = ri ? ri.label.trim().toUpperCase() : '';
+        return w.code.startsWith(q) || w.name.toUpperCase().includes(q);
+      }).slice(0, 8);
+      if (all[_suggestIdx]) selectSuggest(all[_suggestIdx]);
+    }
+    return;
+  } else if (e.key === 'Escape') {
+    hideSuggest(); return;
+  } else { return; }
+
+  items.forEach((it, i) => it.classList.toggle('active', i === _suggestIdx));
+  if (items[_suggestIdx]) items[_suggestIdx].scrollIntoView({ block: 'nearest' });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════════════
+
+function esc(str) {
+  return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escHtml(str) {
+  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════
+
+renderAll();
+updatePreview();
+</script>
+</body>
+</html>
