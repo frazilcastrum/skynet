@@ -1,0 +1,4074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKYPLOT</title>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  color: #070715;
+  background: #FFFBFF;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── CSS Variables ────────────────────────────────────────────────────────── */
+:root {
+  --bg-app:        #FFFBFF;
+  --bg-panel:      #ffffff;
+  --bg-card:       #f4f8fb;
+  --bg-hover:      #e8f4fb;
+  --bg-input:      #ffffff;
+  --border:        #d4e6f0;
+  --border-active: #14BDEB;
+  --text-1:        #070715;
+  --text-2:        #032B43;
+  --text-3:        #AAAAAA;
+  --text-4:        #c0d4df;
+  --accent:        #14BDEB;
+  --accent-light:  #dff6fc;
+  --accent-text:   #032B43;
+  --header-bg:     #032B43;
+  --header-bdr:    #054166;
+  --green:         #16a34a;  --green-bg:  #f0fdf4;  --green-border: #bbf7d0;
+  --amber:         #d97706;  --amber-bg:  #fffbeb;  --amber-border: #fde68a;
+  --red:           #dc2626;  --red-bg:    #fef2f2;  --red-border:   #fecaca;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     14px;
+  --shadow-sm:     0 1px 2px rgba(0,0,0,.08);
+  --shadow-md:     0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+  --sidebar-w:     196px;
+  --panel-w:       224px;
+  --header-h:      48px;
+  --status-h:      26px;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+#header {
+  height: var(--header-h);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-bdr);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+#header .logo {
+  font-size: 15px;
+  font-weight: 800;
+  color: #FFFBFF;
+  letter-spacing: .06em;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+#header .logo span { color: var(--accent); }
+.header-sep { flex: 1; }
+.btn-header {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.08);
+  color: #FFFBFF;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.btn-header:hover { background: rgba(255,255,255,.16); }
+.btn-header.accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.btn-header.accent:hover { background: #0fa8d4; }
+.btn-header.btn-sm { padding: 0 9px; font-size: 11px; }
+.btn-group { display: flex; gap: 3px; }
+.btn-sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(255,255,255,0.15);
+  align-self: center;
+  flex-shrink: 0;
+}
+#draw-mode-indicator {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(20,189,235,.2);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono','Consolas',monospace;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: .04em;
+}
+#draw-mode-indicator.visible { display: flex; }
+#draw-mode-indicator .cancel-draw {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.2);
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+
+/* ── Main Layout ──────────────────────────────────────────────────────────── */
+#main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Sidebar (left) ───────────────────────────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+#sidebar.collapsed { width: 24px; }
+#sidebar-inner {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 8px;
+  min-width: var(--sidebar-w);
+  transition: opacity 0.18s ease;
+}
+#sidebar.collapsed #sidebar-inner { opacity: 0; pointer-events: none; }
+#sidebar-toggle {
+  height: 32px;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
+  overflow: hidden;
+  letter-spacing: .03em;
+}
+#sidebar-toggle:hover { color: var(--text-1); background: var(--bg-hover); }
+#sidebar.collapsed #sidebar-toggle { font-size: 14px; letter-spacing: 0; }
+
+.panel-section { margin-bottom: 14px; }
+.panel-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 0 2px 5px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+
+/* ── Layer Toggle Rows ────────────────────────────────────────────────────── */
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: background .12s;
+}
+.layer-row:hover { background: var(--bg-hover); }
+.layer-row input[type=checkbox] { display: none; }
+.layer-checkbox {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  border: 1.5px solid var(--border-active);
+  background: var(--bg-input);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s;
+}
+.layer-row.checked .layer-checkbox {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.layer-row.checked .layer-checkbox::after {
+  content: '';
+  width: 8px; height: 5px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translateY(-1px);
+  display: block;
+}
+.layer-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.layer-label { font-size: 12px; color: var(--text-1); flex: 1; }
+.layer-row.dimmed .layer-label { color: var(--text-3); }
+
+/* ── Canvas Container ─────────────────────────────────────────────────────── */
+#canvas-container {
+  flex: 1;
+  position: relative;
+  overflow: visible;
+  background: #1a2530;
+  cursor: crosshair;
+}
+#map-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  display: block;
+}
+#no-map-hint {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: rgba(255,255,255,.35);
+  pointer-events: none;
+}
+#no-map-hint .hint-icon { font-size: 40px; margin-bottom: 10px; }
+#no-map-hint h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+#no-map-hint p { font-size: 12px; line-height: 1.6; }
+#calib-warn {
+  position: absolute;
+  top: 10px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(217,119,6,.9);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 20px;
+  pointer-events: none;
+  display: none;
+}
+
+/* ── Mission Panel (right) ────────────────────────────────────────────────── */
+#right-panel {
+  width: 300px;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+#right-panel.collapsed { width: 24px; }
+#right-panel-inner {
+  min-width: 300px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: opacity 0.18s ease;
+}
+#right-panel.collapsed #right-panel-inner { opacity: 0; pointer-events: none; }
+#rp-collapse-btn {
+  width: 100%;
+  height: 32px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 10px;
+  gap: 5px;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
+  overflow: hidden;
+  letter-spacing: .03em;
+  flex-shrink: 0;
+}
+#rp-collapse-btn:hover { color: var(--text-1); background: var(--bg-hover); }
+#rp-expand-btn {
+  display: none;
+  width: 24px;
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 14px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: color .15s;
+}
+#rp-expand-btn:hover { color: var(--accent); }
+#right-panel.collapsed #rp-collapse-btn { display: none; }
+#right-panel.collapsed #rp-expand-btn { display: flex; }
+#right-panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.rpanel-tab {
+  flex: 1;
+  height: 36px;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color .15s, border-color .15s;
+  margin-bottom: -1px;
+}
+.rpanel-tab:hover { color: var(--text-1); }
+.rpanel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+#rp-missions { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
+#rp-assets   { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
+#mission-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mission-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  padding: 9px 10px;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+  position: relative;
+}
+.mission-card:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+.mission-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); }
+.mission-card-color {
+  position: absolute;
+  left: 0; top: 8px; bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+}
+.mission-card-inner { padding-left: 8px; }
+.mission-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 3px;
+}
+.mission-card-title .callsign { flex: 1; }
+.mission-card-meta {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.6;
+  font-family: 'IBM Plex Mono','Consolas',monospace;
+}
+.mission-card-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.btn-xs {
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .12s;
+}
+.btn-xs:hover { background: var(--bg-hover); border-color: var(--accent); }
+.btn-xs.danger:hover { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+#mission-add-btn {
+  margin: 8px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  border: 1.5px dashed var(--border);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+#mission-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Status Bar ───────────────────────────────────────────────────────────── */
+#statusbar {
+  height: var(--status-h);
+  background: var(--header-bg);
+  border-top: 1px solid var(--header-bdr);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 0;
+  flex-shrink: 0;
+  font-family: 'IBM Plex Mono','Consolas',monospace;
+  font-size: 11px;
+}
+.sb-item {
+  color: rgba(255,255,255,.55);
+  padding: 0 10px;
+  border-right: 1px solid rgba(255,255,255,.1);
+  white-space: nowrap;
+}
+.sb-item:first-child { padding-left: 0; }
+.sb-item span { color: rgba(255,255,255,.9); }
+#sb-coords { min-width: 280px; }
+
+/* ── Modals ───────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7,7,21,.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.modal {
+  background: var(--bg-panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--border);
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal.wide { width: 600px; }
+.modal-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.modal-header h2 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-2);
+  flex: 1;
+}
+.modal-close {
+  width: 26px; height: 26px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-3);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s, color .12s;
+}
+.modal-close:hover { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modal-footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.modal-footer .spacer { flex: 1; }
+
+/* ── Form Elements ────────────────────────────────────────────────────────── */
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  display: block;
+}
+.field-row { display: flex; gap: 8px; }
+.field-group { flex: 1; }
+.input, .select {
+  width: 100%;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-1);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+}
+.input:focus, .select:focus { border-color: var(--border-active); }
+.mdp-src-select { width: auto; padding: 0 6px; cursor: pointer; }
+.input.mono { font-family: 'IBM Plex Mono','Consolas',monospace; }
+.input.narrow { width: 60px; }
+.input.w80 { width: 80px; }
+.input-group-inline {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.input-group-inline .input { flex: 1; min-width: 0; }
+.input-sep { color: var(--text-3); font-size: 12px; flex-shrink: 0; }
+.hemisphere-btn {
+  height: 32px;
+  min-width: 32px;
+  padding: 0 8px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .12s, border-color .12s;
+}
+.hemisphere-btn:hover, .hemisphere-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent-text); }
+
+.section-divider {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-divider .section-actions { margin-left: auto; }
+
+/* ── Waypoint Table ───────────────────────────────────────────────────────── */
+#waypoint-list { display: flex; flex-direction: column; gap: 6px; }
+.waypoint-row {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.waypoint-row-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wp-num {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 10px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.wp-label-input { flex: 1; height: 24px; font-size: 11px; }
+.wp-del {
+  width: 22px; height: 22px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.wp-del:hover { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
+.wp-coord-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.wp-coord-label { font-size: 10px; color: var(--text-3); font-weight: 600; width: 24px; flex-shrink: 0; padding-top: 2px; }
+.wp-pick-btn {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-active);
+  background: var(--accent-light);
+  color: var(--accent-text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.wp-pick-btn:hover { background: var(--accent); color: #fff; }
+.wp-time-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.wp-time-row .field-label { margin-bottom: 0; min-width: 50px; }
+
+/* ── Vertex Row (shared by AOO & airspace geometry) ─────────────────────── */
+.vertex-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  flex-wrap: wrap;
+}
+.vx-num {
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--text-2);
+  font-size: 9px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.vx-dms-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: nowrap;
+}
+.vx-axis-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: .05em;
+  width: 22px;
+  flex-shrink: 0;
+}
+
+/* ── AOO Draw ─────────────────────────────────────────────────────────────── */
+#aoo-status {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#aoo-status.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent-text); }
+
+/* ── Calibration Modal ────────────────────────────────────────────────────── */
+#calib-points-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+#calib-points-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+#calib-points-table td { padding: 4px 4px; vertical-align: middle; }
+.calib-pixel { font-family: 'IBM Plex Mono','Consolas',monospace; color: var(--text-3); font-size: 11px; }
+#calib-scale {
+  font-size: 12px;
+  color: var(--text-2);
+  font-family: 'IBM Plex Mono','Consolas',monospace;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+.calib-step {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+.calib-step strong { color: var(--accent); }
+
+/* ── Airspace Modal ───────────────────────────────────────────────────────── */
+.type-selector { display: flex; gap: 6px; }
+.type-btn {
+  flex: 1;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.type-btn.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent-text); }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.btn:hover { background: var(--bg-hover); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn.primary:hover { background: #0fa8d4; }
+.btn.danger { color: var(--red); }
+.btn.danger:hover { background: var(--red-bg); border-color: var(--red-border); }
+
+/* ── Color Swatch ─────────────────────────────────────────────────────────── */
+.color-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.color-swatch {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color .12s, transform .12s;
+}
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch.selected { border-color: var(--text-1); }
+
+/* ── Import/Export bar ────────────────────────────────────────────────────── */
+#import-export-bar {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ── Asset Type Filter Pills (side panel) ────────────────────────────────── */
+#asset-type-bar {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.asset-type-pill {
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.asset-type-pill:hover { background: var(--bg-hover); color: var(--text-1); border-color: var(--accent); }
+.asset-type-pill.active { background: var(--accent-light); color: var(--accent-text); border-color: var(--accent); }
+
+/* ── Filters Modal ────────────────────────────────────────────────────────── */
+.filter-tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 10px 16px 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.filter-tab {
+  height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  margin-bottom: -1px;
+}
+.filter-tab:hover { color: var(--text-1); }
+.filter-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.filter-search {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.asset-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+.asset-row:hover { background: var(--bg-hover); }
+.asset-row-top { display: flex; align-items: center; gap: 7px; }
+.asset-row-bot { display: flex; align-items: center; gap: 5px; padding-left: 17px; }
+.asset-row .asset-color { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.asset-row .asset-name { flex: 1; font-size: 12px; font-weight: 600; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asset-row .asset-type { font-size: 10px; color: var(--text-3); flex: 1; }
+.asset-row .asset-warn { font-size: 10px; color: var(--amber); }
+.asset-row .asset-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.vis-toggle {
+  width: 32px; height: 18px;
+  border-radius: 9px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.vis-toggle.on  { background: var(--accent); }
+.vis-toggle.off { background: var(--border); }
+.vis-toggle::after {
+  content: '';
+  position: absolute;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px;
+  transition: left .15s;
+}
+.vis-toggle.on::after  { left: 17px; }
+.vis-toggle.off::after { left: 3px; }
+
+/* ── Asset Picker Modal ───────────────────────────────────────────────────── */
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.picker-row:hover { border-color: var(--accent); background: var(--accent-light); }
+.picker-row .picker-sym { font-size: 14px; flex-shrink: 0; }
+.picker-row .picker-name { flex: 1; font-size: 12px; font-weight: 700; color: var(--text-2); }
+.picker-row .picker-coord { font-size: 10px; color: var(--text-3); font-family: 'IBM Plex Mono','Consolas',monospace; }
+.picker-row.selected-asset { border-color: var(--accent); background: var(--accent-light); }
+
+/* ── Scrollbar styling ────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-4); }
+
+/* ── Mission Info Panel ───────────────────────────────────────────────────── */
+#mission-info-panel {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 420px;
+  max-height: 340px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#mission-info-panel.hidden { display: none; }
+#mip-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  position: relative;
+}
+#mip-color-bar {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+#mip-callsign { font-size: 14px; font-weight: 800; color: var(--text-2); letter-spacing: .04em; }
+#mip-meta { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+#mip-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-3);
+  padding: 2px 6px;
+}
+#mip-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+.mip-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+.mip-row:last-child { border-bottom: none; }
+.mip-row.active-leg { background: var(--accent-light); border-radius: 6px; margin: 0 -4px; padding: 5px 4px; }
+.mip-row.clickable { cursor: pointer; }
+.mip-row.clickable:hover { background: var(--bg-hover); border-radius: 4px; }
+.mip-dot { width: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding-top: 1px; }
+.mip-label { font-weight: 700; flex: 1; color: var(--text-1); }
+.mip-coord { font-family: 'IBM Plex Mono','Consolas',monospace; color: var(--text-3); font-size: 10px; }
+.mip-tot { font-family: 'IBM Plex Mono','Consolas',monospace; color: var(--accent-text); font-size: 11px; font-weight: 700; text-align: right; flex-shrink: 0; }
+
+/* ── Asset Info Panel ────────────────────────────────────────────────────── */
+#asset-info-panel {
+  position: absolute;
+  bottom: 40px;
+  right: 24px;
+  width: 320px;
+  max-height: 300px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateY(calc(100% + 48px));
+  opacity: 0;
+  transition: transform 0.26s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.22s ease;
+  pointer-events: none;
+}
+#asset-info-panel.visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+#aip-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#aip-color-bar { width: 4px; align-self: stretch; border-radius: 2px; flex-shrink: 0; }
+#aip-title-block { flex: 1; }
+#aip-designator { font-size: 14px; font-weight: 800; color: var(--text-2); letter-spacing: .04em; }
+#aip-type-row { margin-top: 2px; display: flex; gap: 5px; align-items: center; }
+#aip-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-3);
+  padding: 2px 6px;
+}
+#aip-body { flex: 1; overflow-y: auto; padding: 8px 12px; }
+.aip-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+.aip-row:last-child { border-bottom: none; }
+.aip-row-label { font-weight: 700; color: var(--text-3); width: 80px; flex-shrink: 0; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; padding-top: 1px; }
+.aip-row-val { flex: 1; color: var(--text-1); font-family: 'IBM Plex Mono','Consolas',monospace; font-size: 11px; line-height: 1.5; }
+
+/* ── Utility ──────────────────────────────────────────────────────────────── */
+.hidden { display: none !important; }
+.badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 16px; padding: 0 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.badge.danger { background: var(--red-bg); color: var(--red); }
+.badge.prohibited { background: #fdf4ff; color: #7c3aed; }
+.badge.restricted { background: var(--amber-bg); color: var(--amber); }
+.badge.exercise { background: #f5f3ff; color: #6d28d9; }
+.badge.airway { background: var(--bg-card); color: var(--text-2); border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<header id="header">
+  <div class="logo">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+      <!-- Outer scope ring -->
+      <circle cx="13" cy="13" r="11" stroke="#14BDEB" stroke-width="1.4" fill="none" opacity=".7"/>
+      <!-- Tick marks -->
+      <line x1="13" y1="2"  x2="13" y2="5.5"  stroke="#14BDEB" stroke-width="1.4"/>
+      <line x1="13" y1="20.5" x2="13" y2="24" stroke="#14BDEB" stroke-width="1.4"/>
+      <line x1="2"  y1="13" x2="5.5" y2="13"  stroke="#14BDEB" stroke-width="1.4"/>
+      <line x1="20.5" y1="13" x2="24" y2="13" stroke="#14BDEB" stroke-width="1.4"/>
+      <!-- Inner ring -->
+      <circle cx="13" cy="13" r="5.5" stroke="#14BDEB" stroke-width="1" fill="none" opacity=".4"/>
+      <!-- Diamond datum marker -->
+      <path d="M13 8.5 L17 13 L13 17.5 L9 13 Z" fill="#14BDEB"/>
+      <!-- Center dot -->
+      <circle cx="13" cy="13" r="1.5" fill="#032B43"/>
+    </svg>
+    SKY<span>PLOT</span>
+  </div>
+  <div id="draw-mode-indicator">
+    <span id="draw-mode-text">DRAW MODE</span>
+    <button class="cancel-draw" onclick="cancelDraw()" title="Cancel (Esc)">✕</button>
+  </div>
+  <div class="header-sep"></div>
+  <div class="btn-group">
+    <button class="btn-header btn-sm" onclick="loadMockData()" title="Populate with demo missions and airspace">Demo</button>
+    <button class="btn-header btn-sm" onclick="document.getElementById('csv-import-input').click()" title="Import missions from CSV file">↑ CSV</button>
+    <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="importMissionsCSV(event)">
+  </div>
+  <span class="btn-sep"></span>
+  <div class="btn-group">
+    <button class="btn-header" onclick="openDatumModal()">+ Datum</button>
+    <button class="btn-header" onclick="openAirspaceModal()">+ Airspace</button>
+    <button class="btn-header" onclick="openCalibrationModal()">◎ Calibrate</button>
+  </div>
+  <span class="btn-sep"></span>
+  <button class="btn-header accent" onclick="openMissionModal()">+ Mission</button>
+  <span class="btn-sep"></span>
+  <div class="btn-group">
+    <button class="btn-header btn-sm" id="export-btn" onclick="exportJSON()">↓ JSON</button>
+    <button class="btn-header btn-sm" onclick="document.getElementById('import-file').click()">↑ JSON</button>
+    <input type="file" id="import-file" accept=".json" class="hidden" onchange="importJSON(event)">
+  </div>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────────────────── -->
+<div id="main">
+
+  <!-- Left Sidebar -->
+  <aside id="sidebar">
+    <div id="sidebar-inner">
+      <div class="panel-section">
+        <div class="panel-section-title">Layers</div>
+        <label class="layer-row checked" id="lr-airways">
+          <span class="layer-checkbox"></span>
+          <span class="layer-dot" style="background:#032B43;border:1px solid #aaa"></span>
+          <span class="layer-label">Airways</span>
+        </label>
+        <label class="layer-row checked" id="lr-dpr">
+          <span class="layer-checkbox"></span>
+          <span class="layer-dot" style="background:#dc2626"></span>
+          <span class="layer-label">D / P / R Areas</span>
+        </label>
+        <label class="layer-row checked" id="lr-exercise">
+          <span class="layer-checkbox"></span>
+          <span class="layer-dot" style="background:#7c3aed"></span>
+          <span class="layer-label">Exercise Airspace</span>
+        </label>
+        <label class="layer-row checked" id="lr-routes">
+          <span class="layer-checkbox"></span>
+          <span class="layer-dot" style="background:#14BDEB"></span>
+          <span class="layer-label">Routes</span>
+        </label>
+        <label class="layer-row checked" id="lr-aoo">
+          <span class="layer-checkbox"></span>
+          <span class="layer-dot" style="background:#14BDEB;opacity:.5"></span>
+          <span class="layer-label">Area of Ops</span>
+        </label>
+        <label class="layer-row checked" id="lr-datums">
+          <span class="layer-checkbox"></span>
+          <span class="layer-dot" style="background:#f59e0b;transform:rotate(45deg);border-radius:2px"></span>
+          <span class="layer-label">Datum Points</span>
+        </label>
+      </div>
+      <div class="panel-section" id="asset-filter-section">
+        <div class="panel-section-title">Missions</div>
+        <div id="asset-filter-list">
+          <div style="font-size:11px;color:var(--text-4);padding:4px 4px;">No missions yet</div>
+        </div>
+      </div>
+    </div>
+    <button id="sidebar-toggle" onclick="toggleSidebar()">◂ Collapse</button>
+  </aside>
+
+  <!-- Canvas -->
+  <div id="canvas-container">
+    <canvas id="map-canvas"></canvas>
+    <div id="no-map-hint">
+      <div class="hint-icon">🗺</div>
+      <h3>No Base Map Loaded</h3>
+      <p>Click <strong>◎ Calibrate</strong> to load a map image<br>and set reference coordinates.</p>
+    </div>
+    <div id="calib-warn">⚠ Map not calibrated — coordinates unavailable</div>
+
+    <!-- Info panels live here so they're bounded by the canvas area -->
+    <div id="mission-info-panel" class="hidden">
+      <div id="mip-header">
+        <div id="mip-color-bar"></div>
+        <div id="mip-title-block">
+          <div id="mip-callsign"></div>
+          <div id="mip-meta"></div>
+        </div>
+        <button id="mip-close" onclick="closeMissionInfoPanel()">✕</button>
+      </div>
+      <div id="mip-body"></div>
+    </div>
+
+    <div id="asset-info-panel">
+      <div id="aip-header">
+        <div id="aip-color-bar"></div>
+        <div id="aip-title-block">
+          <div id="aip-designator"></div>
+          <div id="aip-type-row"></div>
+        </div>
+        <button id="aip-close" onclick="closeAssetInfoPanel()">✕</button>
+      </div>
+      <div id="aip-body"></div>
+    </div>
+  </div>
+
+  <!-- Right Panel (tabbed) -->
+  <aside id="right-panel">
+    <button id="rp-collapse-btn" onclick="toggleRightPanel()" title="Collapse panel">▶ Collapse</button>
+    <button id="rp-expand-btn"   onclick="toggleRightPanel()" title="Expand panel">◀</button>
+    <div id="right-panel-inner">
+    <div id="right-panel-tabs">
+      <button class="rpanel-tab active" data-rt="missions" onclick="switchRightPanel('missions')">Missions</button>
+      <button class="rpanel-tab"        data-rt="assets"   onclick="switchRightPanel('assets')">Assets</button>
+    </div>
+    <!-- Missions tab -->
+    <div id="rp-missions">
+      <div id="mission-list"></div>
+      <button id="mission-add-btn" onclick="openMissionModal()">＋ Add Mission</button>
+    </div>
+    <!-- Assets tab -->
+    <div id="rp-assets" class="hidden">
+      <!-- Type filter pills -->
+      <div id="asset-type-bar">
+        <button class="asset-type-pill active" data-tab="all"      onclick="switchFilterTab('all')">All</button>
+        <button class="asset-type-pill"        data-tab="datums"   onclick="switchFilterTab('datums')">Datums</button>
+        <button class="asset-type-pill"        data-tab="airspace" onclick="switchFilterTab('airspace')">Airspace</button>
+        <button class="asset-type-pill"        data-tab="missions" onclick="switchFilterTab('missions')">Missions</button>
+      </div>
+      <!-- Search -->
+      <div style="padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <input class="input" id="panel-filter-search" placeholder="Search assets…" oninput="renderFiltersList()" style="height:26px;font-size:12px;width:100%">
+      </div>
+      <div id="filters-list" style="flex:1;overflow-y:auto"></div>
+      <div style="padding:5px 8px;border-top:1px solid var(--border);font-size:10px;color:var(--text-3);flex-shrink:0" id="filters-count"></div>
+    </div>
+    </div><!-- end right-panel-inner -->
+  </aside>
+</div>
+
+<!-- ── Status Bar ───────────────────────────────────────────────────────────── -->
+<div id="statusbar">
+  <div class="sb-item" id="sb-coords">Cursor — <span>move over map</span></div>
+  <div class="sb-item" id="sb-scale">Scale — <span id="sb-scale-val">uncalibrated</span></div>
+  <div class="sb-item" id="sb-calib">Calib — <span id="sb-calib-val" style="color:#dc2626">✕ none</span></div>
+  <div class="sb-item" id="sb-zoom">Zoom — <span id="sb-zoom-val">100%</span></div>
+</div>
+
+<!-- ═══════════════════════ MODALS ═══════════════════════════════════════════ -->
+
+<!-- Calibration Modal -->
+<div class="modal-overlay hidden" id="modal-calib">
+  <div class="modal wide">
+    <div class="modal-header">
+      <h2>Map Calibration</h2>
+      <button class="modal-close" onclick="closeModal('modal-calib')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="calib-step">
+        <strong>Step 1</strong> — Load your base map image (PNG or JPG).
+      </div>
+      <div class="field-group">
+        <label class="field-label">Base Map Image</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn" onclick="document.getElementById('map-file-input').click()">Choose File…</button>
+          <span id="map-file-name" style="font-size:12px;color:var(--text-3)">No file chosen</span>
+          <input type="file" id="map-file-input" accept="image/*" class="hidden" onchange="loadMapImage(event)">
+        </div>
+      </div>
+      <div class="calib-step">
+        <strong>Step 2</strong> — Click <em>Pick Point on Map</em>, then click a known location on the map. Enter the real-world DMS coordinates for each point. Minimum 2 points required.
+      </div>
+      <table id="calib-points-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Pixel (x, y)</th>
+            <th>Latitude (DMS)</th>
+            <th>Longitude (DMS)</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="calib-tbody"></tbody>
+      </table>
+      <button class="btn" onclick="addCalibPoint()" style="align-self:flex-start">+ Pick Point on Map</button>
+      <div id="calib-scale" class="hidden">Scale: computing…</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn danger" onclick="clearCalibration()">Clear All</button>
+      <div class="spacer"></div>
+      <button class="btn" onclick="closeModal('modal-calib')">Cancel</button>
+      <button class="btn primary" onclick="applyCalibration()">Apply & Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mission Modal -->
+<div class="modal-overlay hidden" id="modal-mission">
+  <div class="modal wide">
+    <div class="modal-header">
+      <h2 id="mission-modal-title">Add Mission</h2>
+      <button class="modal-close" onclick="closeModal('modal-mission')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Callsign</label>
+          <input class="input" id="m-callsign" placeholder="e.g. ALPHA 1" maxlength="20">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Aircraft Type</label>
+          <input class="input" id="m-acft-type" placeholder="e.g. F-16C">
+        </div>
+        <div class="field-group" style="max-width:80px">
+          <label class="field-label">No. Acft</label>
+          <input class="input" id="m-acft-count" type="number" min="1" max="99" value="1">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Dep ICAO</label>
+          <input class="input mono" id="m-dep" placeholder="WSSS" maxlength="4" style="text-transform:uppercase">
+        </div>
+        <div class="field-group">
+          <label class="field-label">ETD</label>
+          <input class="input mono" id="m-etd" placeholder="0600H" maxlength="6">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Arr ICAO</label>
+          <input class="input mono" id="m-arr" placeholder="WMKK" maxlength="4" style="text-transform:uppercase">
+        </div>
+        <div class="field-group">
+          <label class="field-label">ETA</label>
+          <input class="input mono" id="m-eta" placeholder="0800H" maxlength="6">
+        </div>
+      </div>
+      <!-- Color -->
+      <div>
+        <label class="field-label">Mission Colour</label>
+        <div class="color-swatches" id="mission-color-swatches"></div>
+      </div>
+      <!-- Route (unified) -->
+      <div class="section-divider">
+        Route
+        <div class="section-actions" style="display:flex;gap:4px">
+          <button class="btn-xs" onclick="addRouteItem('wpt','assets')">+ From Assets</button>
+          <button class="btn-xs" onclick="addRouteItem('wpt','manual')">+ New Point</button>
+          <button class="btn-xs" onclick="addRouteItem('aoo','manual')">+ New AO Vertex</button>
+        </div>
+      </div>
+      <div id="route-list"></div>
+      <div id="aoo-draw-bar" style="display:none;gap:8px;margin-top:4px">
+        <button class="btn" onclick="startAooDraw()">◻ Draw AOO on Map</button>
+        <button class="btn danger" onclick="clearAooItems()">Clear AOO</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn danger" id="mission-delete-btn" onclick="deleteCurrentMission()" class="hidden">Delete</button>
+      <div class="spacer"></div>
+      <button class="btn" onclick="closeModal('modal-mission')">Cancel</button>
+      <button class="btn primary" onclick="saveMission()">Save Mission</button>
+    </div>
+  </div>
+</div>
+
+<!-- Airspace Modal -->
+<div class="modal-overlay hidden" id="modal-airspace">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="airspace-modal-title">Add Airspace</h2>
+      <button class="modal-close" onclick="closeModal('modal-airspace')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <label class="field-label">Type</label>
+        <div class="type-selector" id="airspace-type-selector">
+          <button class="type-btn selected" data-type="airway" onclick="selectAirspaceType('airway')">Airway</button>
+          <button class="type-btn" data-type="danger" onclick="selectAirspaceType('danger')">Danger (D)</button>
+          <button class="type-btn" data-type="prohibited" onclick="selectAirspaceType('prohibited')">Prohibited (P)</button>
+          <button class="type-btn" data-type="restricted" onclick="selectAirspaceType('restricted')">Restricted (R)</button>
+          <button class="type-btn" data-type="exercise" onclick="selectAirspaceType('exercise')">Exercise</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Designator</label>
+          <input class="input mono" id="as-designator" placeholder="e.g. A1, EDA201">
+        </div>
+        <div class="field-group" id="as-alt-group">
+          <label class="field-label">Lower Alt</label>
+          <input class="input mono" id="as-lower" placeholder="SFC / FL050">
+        </div>
+        <div class="field-group" id="as-alt-group2">
+          <label class="field-label">Upper Alt</label>
+          <input class="input mono" id="as-upper" placeholder="FL200">
+        </div>
+      </div>
+      <div class="section-divider">
+        Geometry
+        <div class="section-actions"><button class="btn-xs" onclick="addAsVertexManual()">+ Vertex</button></div>
+      </div>
+      <div id="as-geom-status" class="calib-step">No geometry defined.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn" onclick="startAirspaceDraw()">◻ Draw on Map</button>
+        <button class="btn" onclick="openPickerForAirspace()">◆ Use Datum Points</button>
+        <button class="btn" onclick="document.getElementById('as-import-file').click()">↑ Import GeoJSON/KML</button>
+        <button class="btn danger" onclick="clearAirspaceGeom()">Clear All</button>
+        <input type="file" id="as-import-file" accept=".json,.geojson,.kml" class="hidden" onchange="importAirspaceGeom(event)">
+      </div>
+      <div id="as-vertex-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn danger hidden" id="airspace-delete-btn" onclick="deleteCurrentAirspace()">Delete</button>
+      <div class="spacer"></div>
+      <button class="btn" onclick="closeModal('modal-airspace')">Cancel</button>
+      <button class="btn primary" onclick="saveAirspace()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Datum Point Modal -->
+<div class="modal-overlay hidden" id="modal-datum">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="datum-modal-title">Add Datum Point</h2>
+      <button class="modal-close" onclick="closeModal('modal-datum')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field-group">
+          <label class="field-label">Label</label>
+          <input class="input" id="dp-label" placeholder="e.g. CP-1, RV ALPHA, IP">
+        </div>
+        <div class="field-group" style="max-width:160px">
+          <label class="field-label">Symbol</label>
+          <select class="select" id="dp-symbol">
+            <option value="diamond">◆ Diamond</option>
+            <option value="circle">● Circle</option>
+            <option value="square">■ Square</option>
+            <option value="triangle">▲ Triangle</option>
+            <option value="cross">✕ Cross</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="field-label">Colour</label>
+        <div class="color-swatches" id="datum-color-swatches"></div>
+      </div>
+      <div class="section-divider">
+        Coordinates
+        <div class="section-actions">
+          <button class="btn-xs" onclick="pickDatumOnMap()">📍 Pick on Map</button>
+        </div>
+      </div>
+      <div class="form-row" style="gap:8px">
+        <div style="flex:1">
+          <label class="field-label">Latitude</label>
+          <input class="input mono" id="dp-lat" placeholder="012048N" style="width:100%">
+        </div>
+        <div style="flex:1">
+          <label class="field-label">Longitude</label>
+          <input class="input mono" id="dp-lon" placeholder="1042424E" style="width:100%">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn danger hidden" id="datum-delete-btn" onclick="deleteCurrentDatum()">Delete</button>
+      <div class="spacer"></div>
+      <button class="btn" onclick="closeModal('modal-datum')">Cancel</button>
+      <button class="btn" onclick="saveDatumAndAddAnother()">Save & Add Another</button>
+      <button class="btn primary" onclick="saveDatum()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Filters / Assets Modal -->
+<div class="modal-overlay hidden" id="modal-filters">
+  <div class="modal" style="width:680px;max-height:80vh">
+    <div class="modal-header">
+      <h2>Assets &amp; Filters</h2>
+      <button class="modal-close" onclick="closeModal('modal-filters')">✕</button>
+    </div>
+    <div class="filter-tab-bar">
+      <button class="filter-tab active" data-tab="all"      onclick="switchFilterTab('all')">All</button>
+      <button class="filter-tab"        data-tab="missions" onclick="switchFilterTab('missions')">Missions</button>
+      <button class="filter-tab"        data-tab="datums"   onclick="switchFilterTab('datums')">Datum Points</button>
+      <button class="filter-tab"        data-tab="airspace" onclick="switchFilterTab('airspace')">Airspace</button>
+    </div>
+    <div class="filter-search">
+      <input class="input" id="filter-search-input-modal" placeholder="Search assets…" style="height:28px;font-size:12px">
+    </div>
+    <div id="filters-list-modal" style="flex:1;overflow-y:auto;min-height:0"></div>
+    <div class="modal-footer">
+      <span style="font-size:11px;color:var(--text-3)" id="filters-count-modal"></span>
+      <div class="spacer"></div>
+      <button class="btn" onclick="closeModal('modal-filters')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Asset Picker Modal (datums + exercise airspace → waypoints or airspace geometry) -->
+<div class="modal-overlay hidden" id="modal-picker">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <h2 id="picker-title">Select Asset</h2>
+      <button class="modal-close" onclick="closeModal('modal-picker')">✕</button>
+    </div>
+    <div class="modal-body" style="gap:8px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="picker-type-filter">
+        <button class="type-btn selected" data-pf="all"      onclick="switchPickerFilter('all')">All</button>
+        <button class="type-btn"          data-pf="datums"   onclick="switchPickerFilter('datums')">Datum Points</button>
+        <button class="type-btn"          data-pf="exercise" onclick="switchPickerFilter('exercise')">Exercise Airspace</button>
+      </div>
+      <input class="input" id="picker-search" placeholder="Search…" oninput="renderPickerList()" style="height:28px;font-size:12px">
+      <div id="picker-list" style="display:flex;flex-direction:column;gap:5px;max-height:340px;overflow-y:auto"></div>
+      <!-- Multi-select tray for airspace geometry mode -->
+      <div id="picker-tray" class="hidden">
+        <div class="section-divider" style="margin-top:4px">Selected order <span id="picker-tray-count" style="font-weight:400;color:var(--text-3)"></span></div>
+        <div id="picker-tray-list" style="display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto;margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="modal-footer" id="picker-footer">
+      <div class="spacer"></div>
+      <button class="btn" onclick="closeModal('modal-picker')">Cancel</button>
+      <button class="btn primary hidden" id="picker-apply-btn" onclick="applyPickerSelection()">Apply to Geometry</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+const MISSION_COLORS = [
+  '#14BDEB','#f59e0b','#10b981','#f43f5e',
+  '#8b5cf6','#fb923c','#06b6d4','#84cc16',
+  '#888888','#1a1a1a'
+];
+
+const DPR_COLORS = {
+  danger:     { fill: 'rgba(220,38,38,0.18)',   stroke: '#dc2626' },
+  prohibited: { fill: 'rgba(124,3,237,0.15)',   stroke: '#7c3aed' },
+  restricted: { fill: 'rgba(217,119,6,0.18)',   stroke: '#d97706' },
+  exercise:   { fill: 'rgba(109,40,217,0.15)',  stroke: '#6d28d9' },
+  airway:     { fill: 'rgba(0,0,0,0)',          stroke: '#032B43' }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════════════
+const S = {
+  baseImage: null,
+  baseImageSrc: null,
+  calibPoints: [],       // [{px,py,lat,lon}]
+  transform: null,       // {A (2x3 matrix for px->coord), Ainv (coord->px)}
+  missions: [],          // see mission schema
+  airspaces: [],         // see airspace schema
+  datumPoints: [],       // global datum points [{id,label,lat,lon,symbol,color}]
+  layers: { airways:true, dpr:true, exercise:true, routes:true, aoo:true, datums:true },
+  visibleMissions: new Set(),
+  selectedMission: null,
+  // pan/zoom
+  panX: 0, panY: 0, zoom: 1,
+  // draw state
+  drawMode: null,        // 'calib-pick' | 'waypoint' | 'aoo' | 'airspace-line' | 'airspace-poly' | 'datum-pick' | 'mission-datum-pick'
+  drawTarget: null,      // context for current draw op
+  drawPoints: [],        // screen-space points being drawn
+  // editing
+  editingMission: null,  // mission being edited in modal
+  editingAirspace: null,
+  pendingCalibPoint: null,
+  // temp AOO for modal
+  tempAoo: null,
+  tempAirspaceGeom: null,
+  tempAirspaceType: null,
+  pulseTarget: null,  // { lon, lat, startTime } for map highlight animation
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  DMS UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
+function ddToDmsParts(dd) {
+  const abs = Math.abs(dd);
+  const d = Math.floor(abs);
+  const mFull = (abs - d) * 60;
+  const m = Math.floor(mFull);
+  const s = ((mFull - m) * 60).toFixed(1);
+  return { d, m, s: parseFloat(s) };
+}
+
+function formatLat(dd) {
+  const p = ddToDmsParts(dd);
+  const h = dd >= 0 ? 'N' : 'S';
+  return `${String(p.d).padStart(2,'0')}°${String(p.m).padStart(2,'0')}'${String(p.s.toFixed(1)).padStart(4,'0')}"${h}`;
+}
+
+function formatLon(dd) {
+  const p = ddToDmsParts(dd);
+  const h = dd >= 0 ? 'E' : 'W';
+  return `${String(p.d).padStart(3,'0')}°${String(p.m).padStart(2,'0')}'${String(p.s.toFixed(1)).padStart(4,'0')}"${h}`;
+}
+
+function dmsPartsToDD(d, m, s, hemi) {
+  const dd = parseFloat(d) + parseFloat(m)/60 + parseFloat(s)/3600;
+  return (hemi === 'S' || hemi === 'W') ? -dd : dd;
+}
+
+// ── Compact DMS format: '012048N' / '1042424E' ────────────────────────────
+function parseCompactDMS(str) {
+  if (!str) return null;
+  str = str.trim().toUpperCase().replace(/\s/g,'');
+  const hemi = str.slice(-1);
+  if (!['N','S','E','W'].includes(hemi)) return null;
+  const num = str.slice(0,-1);
+  let d, m, s;
+  if (hemi === 'N' || hemi === 'S') {
+    if (num.length < 4) return null;
+    d = parseInt(num.slice(0,2),10);
+    m = parseInt(num.slice(2,4),10);
+    s = num.length > 4 ? parseFloat(num.slice(4)) : 0;
+  } else {
+    if (num.length < 5) return null;
+    d = parseInt(num.slice(0,3),10);
+    m = parseInt(num.slice(3,5),10);
+    s = num.length > 5 ? parseFloat(num.slice(5)) : 0;
+  }
+  if (isNaN(d)||isNaN(m)||isNaN(s)||m>=60||s>=60) return null;
+  const dd = d + m/60 + s/3600;
+  return (hemi==='S'||hemi==='W') ? -dd : dd;
+}
+
+function fmtLat(dd) {
+  if (dd==null) return '';
+  const p = ddToDmsParts(Math.abs(dd));
+  return `${String(p.d).padStart(2,'0')}${String(p.m).padStart(2,'0')}${String(Math.round(p.s)).padStart(2,'0')}${dd>=0?'N':'S'}`;
+}
+
+function fmtLon(dd) {
+  if (dd==null) return '';
+  const p = ddToDmsParts(Math.abs(dd));
+  return `${String(p.d).padStart(3,'0')}${String(p.m).padStart(2,'0')}${String(Math.round(p.s)).padStart(2,'0')}${dd>=0?'E':'W'}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AFFINE TRANSFORM (pixel ↔ coordinate)
+// ═══════════════════════════════════════════════════════════════════════════
+// Solves: lon = a*px + b*py + c,  lat = d*px + e*py + f
+// Using least-squares with normal equations for n >= 2 points.
+// For n=2 we fix shear=0 (similarity transform assumption).
+function computeTransform(pts) {
+  if (pts.length < 2) return null;
+  if (pts.length === 2) {
+    // Scale-only (axis-aligned) for 2 points
+    const [p1, p2] = pts;
+    const dPx = p2.px - p1.px || 1e-9;
+    const dPy = p2.py - p1.py || 1e-9;
+    const scaleX = (p2.lon - p1.lon) / dPx;
+    const scaleY = (p2.lat - p1.lat) / dPy;
+    const offX = p1.lon - scaleX * p1.px;
+    const offY = p1.lat - scaleY * p1.py;
+    // Forward: px,py -> lon,lat
+    const fwd = (px, py) => ({ lon: scaleX*px + offX, lat: scaleY*py + offY });
+    // Inverse: lon,lat -> px,py
+    const inv = (lon, lat) => ({ px: (lon - offX)/scaleX, py: (lat - offY)/scaleY });
+    const scaleM = Math.sqrt(scaleX*scaleX + scaleY*scaleY);
+    return { fwd, inv, scaleMetersPerPx: scaleM * 111320, scaleDegreesPerPx: scaleM };
+  }
+  // Full affine for 3+ points (least squares)
+  const n = pts.length;
+  // Build A matrix [px, py, 1] for each point
+  // Normal equations: (A^T A) x = A^T b
+  let AtA = [[0,0,0],[0,0,0],[0,0,0]];
+  let AtBlon = [0,0,0], AtBlat = [0,0,0];
+  for (const p of pts) {
+    const row = [p.px, p.py, 1];
+    for (let i=0;i<3;i++) for (let j=0;j<3;j++) AtA[i][j] += row[i]*row[j];
+    for (let i=0;i<3;i++) { AtBlon[i] += row[i]*p.lon; AtBlat[i] += row[i]*p.lat; }
+  }
+  const cLon = solve3x3(AtA, AtBlon);
+  const cLat = solve3x3(AtA, AtBlat);
+  if (!cLon || !cLat) return null;
+  const [a,b,c] = cLon;
+  const [d,e,f] = cLat;
+  // Inverse: solve px,py from lon,lat
+  // lon = a*px + b*py + c
+  // lat = d*px + e*py + f
+  // Matrix [a b; d e] inverse
+  const det = a*e - b*d;
+  if (Math.abs(det) < 1e-15) return null;
+  const ia =  e/det, ib = -b/det;
+  const ic = -d/det, id2= a/det;
+  const fwd = (px, py) => ({ lon: a*px + b*py + c, lat: d*px + e*py + f });
+  const inv = (lon, lat) => ({
+    px: ia*(lon-c) + ib*(lat-f),
+    py: ic*(lon-c) + id2*(lat-f)
+  });
+  const scaleM = Math.sqrt(a*a + d*d);
+  return { fwd, inv, scaleMetersPerPx: scaleM * 111320, scaleDegreesPerPx: scaleM };
+}
+
+function solve3x3(A, b) {
+  // Gaussian elimination
+  const M = A.map((r,i) => [...r, b[i]]);
+  for (let col=0;col<3;col++) {
+    let maxR = col;
+    for (let r=col+1;r<3;r++) if (Math.abs(M[r][col]) > Math.abs(M[maxR][col])) maxR = r;
+    [M[col], M[maxR]] = [M[maxR], M[col]];
+    if (Math.abs(M[col][col]) < 1e-15) return null;
+    for (let r=0;r<3;r++) {
+      if (r === col) continue;
+      const f = M[r][col] / M[col][col];
+      for (let c=col;c<=3;c++) M[r][c] -= f * M[col][c];
+    }
+  }
+  return [M[0][3]/M[0][0], M[1][3]/M[1][1], M[2][3]/M[2][2]];
+}
+
+// Convert canvas pixel to image pixel (accounting for pan/zoom)
+function canvasToimgPx(cx, cy) {
+  return { px: (cx - S.panX) / S.zoom, py: (cy - S.panY) / S.zoom };
+}
+
+// Convert image pixel to canvas pixel
+function imgToCanvasPx(px, py) {
+  return { cx: px * S.zoom + S.panX, cy: py * S.zoom + S.panY };
+}
+
+// Image pixel → geo coord
+function imgPxToCoord(px, py) {
+  if (!S.transform) return null;
+  return S.transform.fwd(px, py);
+}
+
+// Geo coord → image pixel
+function coordToImgPx(lon, lat) {
+  if (!S.transform) return null;
+  return S.transform.inv(lon, lat);
+}
+
+// Canvas pixel → geo coord
+function canvasToCoord(cx, cy) {
+  const ip = canvasToimgPx(cx, cy);
+  return imgPxToCoord(ip.px, ip.py);
+}
+
+// Geo coord → canvas pixel
+function coordToCanvas(lon, lat) {
+  const ip = coordToImgPx(lon, lat);
+  if (!ip) return null;
+  return imgToCanvasPx(ip.px, ip.py);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PERSISTENCE
+// ═══════════════════════════════════════════════════════════════════════════
+function saveToStorage() {
+  const data = {
+    calibPoints: S.calibPoints,
+    missions: S.missions,
+    airspaces: S.airspaces,
+    datumPoints: S.datumPoints,
+    layers: S.layers,
+    visibleMissions: [...S.visibleMissions],
+    baseImageSrc: S.baseImageSrc,
+    panX: S.panX, panY: S.panY, zoom: S.zoom,
+  };
+  try { localStorage.setItem('skyplot', JSON.stringify(data)); } catch(e) {}
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem('skyplot');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    S.calibPoints  = data.calibPoints || [];
+    S.missions     = data.missions || [];
+    S.airspaces    = data.airspaces || [];
+    S.datumPoints  = data.datumPoints || [];
+    S.layers      = { ...S.layers, ...(data.layers||{}) };
+    S.visibleMissions = new Set(data.visibleMissions || S.missions.map(m=>m.id));
+    S.panX = data.panX||0; S.panY = data.panY||0; S.zoom = data.zoom||1;
+    if (data.baseImageSrc) loadImageFromSrc(data.baseImageSrc);
+    if (S.calibPoints.length >= 2) {
+      S.transform = computeTransform(S.calibPoints);
+    }
+  } catch(e) {}
+}
+
+function exportJSON() {
+  const data = {
+    calibPoints: S.calibPoints,
+    missions: S.missions,
+    airspaces: S.airspaces,
+    layers: S.layers,
+    version: 1
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'skyplot-mission-data.json';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      S.calibPoints  = data.calibPoints || S.calibPoints;
+      S.missions     = data.missions || [];
+      S.airspaces    = data.airspaces || [];
+      S.datumPoints  = data.datumPoints || [];
+      if (data.layers) S.layers = { ...S.layers, ...data.layers };
+      S.visibleMissions = new Set(S.missions.map(m=>m.id));
+      if (S.calibPoints.length >= 2) S.transform = computeTransform(S.calibPoints);
+      saveToStorage(); refreshAll();
+    } catch(err) { alert('Invalid JSON file: ' + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CANVAS SETUP & RENDER
+// ═══════════════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('map-canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const cont = document.getElementById('canvas-container');
+  canvas.width  = cont.clientWidth;
+  canvas.height = cont.clientHeight;
+  render();
+}
+
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(S.panX, S.panY);
+  ctx.scale(S.zoom, S.zoom);
+
+  // Base image
+  if (S.baseImage) {
+    ctx.drawImage(S.baseImage, 0, 0);
+    document.getElementById('no-map-hint').style.display = 'none';
+  } else {
+    document.getElementById('no-map-hint').style.display = 'block';
+  }
+
+  // Layer: Airways
+  if (S.layers.airways) drawAirways();
+  // Layer: D/P/R
+  if (S.layers.dpr) drawDPR();
+  // Layer: Exercise
+  if (S.layers.exercise) drawExercise();
+  // Layer: Area of Ops
+  if (S.layers.aoo) drawAllAoo();
+  // Layer: Routes + mission datums
+  if (S.layers.routes) drawRoutes();
+  // Layer: Global datum points (on top)
+  if (S.layers.datums) drawGlobalDatums();
+  if (S.pulseTarget) drawPulse(S.pulseTarget);
+
+  ctx.restore();
+
+  // Draw in-progress shapes (screen space)
+  drawActiveShape();
+
+  // Calibration warn
+  const warn = document.getElementById('calib-warn');
+  warn.style.display = (S.baseImage && !S.transform) ? 'block' : 'none';
+}
+
+function drawPolyline(pts, style) {
+  if (pts.length < 2) return;
+  ctx.save();
+  ctx.strokeStyle = style.color;
+  ctx.lineWidth = (style.width || 2) / S.zoom;
+  ctx.setLineDash(style.dash ? style.dash.map(v => v / S.zoom) : []);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  const first = coordToImgPx(pts[0].lon, pts[0].lat);
+  if (!first) { ctx.restore(); return; }
+  ctx.moveTo(first.px, first.py);
+  for (let i=1; i<pts.length; i++) {
+    const p = coordToImgPx(pts[i].lon, pts[i].lat);
+    if (p) ctx.lineTo(p.px, p.py);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPolygonFill(pts, style) {
+  if (pts.length < 3) return;
+  ctx.save();
+  ctx.fillStyle = style.fill;
+  ctx.strokeStyle = style.stroke;
+  ctx.lineWidth = (style.width || 2) / S.zoom;
+  ctx.setLineDash(style.dash ? style.dash.map(v => v / S.zoom) : []);
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  const first = coordToImgPx(pts[0].lon, pts[0].lat);
+  if (!first) { ctx.restore(); return; }
+  ctx.moveTo(first.px, first.py);
+  for (let i=1; i<pts.length; i++) {
+    const p = coordToImgPx(pts[i].lon, pts[i].lat);
+    if (p) ctx.lineTo(p.px, p.py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawLabel(text, lon, lat, style) {
+  const p = coordToImgPx(lon, lat);
+  if (!p) return;
+  const offY = (style.dy || 0) / S.zoom;
+  ctx.save();
+  ctx.font = `${style.weight||600} ${(style.size||11)/S.zoom}px Manrope,'Segoe UI',system-ui`;
+  ctx.fillStyle = style.color || '#070715';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  if (style.bg) {
+    const m = ctx.measureText(text);
+    const w = m.width + 6/S.zoom, h = (style.size||11)/S.zoom + 4/S.zoom;
+    ctx.fillStyle = style.bg;
+    ctx.fillRect(p.px - w/2, p.py + offY - h/2, w, h);
+    ctx.fillStyle = style.color || '#070715';
+  }
+  ctx.fillText(text, p.px, p.py + offY);
+  ctx.restore();
+}
+
+function drawAirways() {
+  for (const as of S.airspaces) {
+    if (as.type !== 'airway') continue;
+    if (as.visible === false) continue;
+    if (!as.points || as.points.length < 2) continue;
+    drawPolyline(as.points, { color: '#032B43', width: 3 });
+    // Label at midpoint
+    if (as.designator) {
+      const mid = as.points[Math.floor(as.points.length/2)];
+      drawLabel(as.designator, mid.lon, mid.lat, { size:12, weight:700, color:'#032B43', bg:'rgba(255,255,255,0.7)' });
+    }
+  }
+}
+
+function drawDPR() {
+  for (const as of S.airspaces) {
+    if (!['danger','prohibited','restricted'].includes(as.type)) continue;
+    if (as.visible === false) continue;
+    if (!as.points || as.points.length < 3) continue;
+    const col = DPR_COLORS[as.type];
+    drawPolygonFill(as.points, { fill: col.fill, stroke: col.stroke, width: 2 });
+    // Label centroid
+    if (as.designator) {
+      const c = centroid(as.points);
+      const prefix = as.type==='danger'?'D-':as.type==='prohibited'?'P-':'R-';
+      drawLabel(prefix+as.designator, c.lon, c.lat, { size:12, weight:700, color: col.stroke, bg:'rgba(255,255,255,0.75)' });
+    }
+  }
+}
+
+function drawExercise() {
+  for (const as of S.airspaces) {
+    if (as.type !== 'exercise') continue;
+    if (as.visible === false) continue;
+    if (!as.points || as.points.length < 3) continue;
+    const col = DPR_COLORS.exercise;
+    drawPolygonFill(as.points, { fill: col.fill, stroke: col.stroke, width: 2, dash:[6,4] });
+    if (as.designator) {
+      const c = centroid(as.points);
+      drawLabel(as.designator, c.lon, c.lat, { size:12, weight:700, color: col.stroke, bg:'rgba(255,255,255,0.75)' });
+    }
+  }
+}
+
+function drawAllAoo() {
+  for (const m of S.missions) {
+    if (!S.visibleMissions.has(m.id)) continue;
+    if (!m.aoo || m.aoo.length < 3) continue;
+    const alpha = m.id === S.selectedMission ? '0.35' : '0.20';
+    const fill = hexToRgba(m.color, parseFloat(alpha));
+    drawPolygonFill(convexHull(m.aoo), { fill, stroke: m.color, width: 2, dash:[7,4] });
+  }
+}
+
+function drawRoutes() {
+  for (const m of S.missions) {
+    if (!S.visibleMissions.has(m.id)) continue;
+    // Route line uses centroid for AO waypoints (lat/lon already computed)
+    const pts = (m.waypoints || []).filter(w => w.lat != null && w.lon != null);
+    if (pts.length >= 2) drawPolyline(pts, { color: m.color, width: 2 });
+
+    for (const wp of pts) {
+      const p = coordToImgPx(wp.lon, wp.lat);
+      if (!p) continue;
+
+      if (wp.isAO && wp.aoVertices && wp.aoVertices.length >= 3) {
+        // Draw AO polygon with mission colour, then a diamond at centroid
+        const fill = hexToRgba(m.color, 0.18);
+        drawPolygonFill(convexHull(wp.aoVertices), { fill, stroke: m.color, width: 1.5, dash:[5,3] });
+        // Diamond marker at centroid
+        ctx.save();
+        const sz = 6 / S.zoom;
+        ctx.fillStyle = m.color;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5 / S.zoom;
+        ctx.beginPath();
+        ctx.moveTo(p.px, p.py - sz);
+        ctx.lineTo(p.px + sz, p.py);
+        ctx.lineTo(p.px, p.py + sz);
+        ctx.lineTo(p.px - sz, p.py);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+        // AO label at centroid
+        if (wp.label) drawLabel(wp.label, wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.85)', dy: -16 });
+      } else {
+        // Regular waypoint dot
+        ctx.save();
+        ctx.fillStyle = m.color;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5 / S.zoom;
+        ctx.beginPath();
+        ctx.arc(p.px, p.py, 5/S.zoom, 0, Math.PI*2);
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+
+      // TOT labels (both regular and AO waypoints)
+      if (wp.totEarly && wp.totLate) {
+        const dyTop = wp.isAO ? -28 : -14;
+        drawLabel(wp.totEarly, wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.8)', dy: dyTop });
+        drawLabel(wp.totLate,  wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.8)', dy: dyTop + 14 });
+      } else if (wp.totEarly || wp.totLate) {
+        const dy = wp.isAO ? -28 : -14;
+        drawLabel(wp.totEarly || wp.totLate, wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.8)', dy });
+      }
+    }
+    // Mission datum points (circle + cross, mission colour)
+    for (const dp of (m.datumPoints || [])) {
+      if (dp.lat == null || dp.lon == null) continue;
+      drawDatumMarker(dp.lon, dp.lat, 'circle-cross', m.color, dp.label);
+    }
+  }
+}
+
+function drawGlobalDatums() {
+  for (const dp of S.datumPoints) {
+    if (dp.visible === false) continue;
+    if (dp.lat == null || dp.lon == null) continue;
+    drawDatumMarker(dp.lon, dp.lat, dp.symbol || 'diamond', dp.color || '#f59e0b', dp.label);
+  }
+}
+
+function drawDatumMarker(lon, lat, symbol, color, label) {
+  const p = coordToImgPx(lon, lat);
+  if (!p) return;
+  const sz = 7 / S.zoom;
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5 / S.zoom;
+  ctx.beginPath();
+  if (symbol === 'diamond') {
+    ctx.moveTo(p.px,        p.py - sz);
+    ctx.lineTo(p.px + sz,   p.py);
+    ctx.lineTo(p.px,        p.py + sz);
+    ctx.lineTo(p.px - sz,   p.py);
+    ctx.closePath();
+  } else if (symbol === 'square') {
+    ctx.rect(p.px - sz*0.75, p.py - sz*0.75, sz*1.5, sz*1.5);
+  } else if (symbol === 'triangle') {
+    ctx.moveTo(p.px,        p.py - sz);
+    ctx.lineTo(p.px + sz,   p.py + sz);
+    ctx.lineTo(p.px - sz,   p.py + sz);
+    ctx.closePath();
+  } else if (symbol === 'cross') {
+    const t = sz * 0.3;
+    ctx.rect(p.px - t,   p.py - sz, t*2, sz*2);
+    ctx.rect(p.px - sz,  p.py - t,  sz*2, t*2);
+  } else if (symbol === 'circle-cross') {
+    ctx.arc(p.px, p.py, sz, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    // inner cross
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1 / S.zoom;
+    ctx.beginPath();
+    ctx.moveTo(p.px - sz*0.55, p.py); ctx.lineTo(p.px + sz*0.55, p.py);
+    ctx.moveTo(p.px, p.py - sz*0.55); ctx.lineTo(p.px, p.py + sz*0.55);
+    ctx.stroke();
+    ctx.restore();
+    if (label) drawLabel(label, lon, lat, { size:11, weight:700, color, bg:'rgba(255,255,255,0.82)' });
+    return;
+  } else {
+    ctx.arc(p.px, p.py, sz, 0, Math.PI*2);
+  }
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+  if (label) drawLabel(label, lon, lat, { size:11, weight:700, color, bg:'rgba(255,255,255,0.82)' });
+}
+
+function drawActiveShape() {
+  const pts = S.drawPoints;
+  if (!pts || pts.length === 0) return;
+  ctx.save();
+  ctx.strokeStyle = '#14BDEB';
+  ctx.fillStyle = 'rgba(20,189,235,0.12)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5,4]);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(pts[0].cx, pts[0].cy);
+  for (let i=1; i<pts.length; i++) ctx.lineTo(pts[i].cx, pts[i].cy);
+  if (S.drawMode === 'aoo' || S.drawMode === 'airspace-poly') ctx.closePath();
+  ctx.stroke();
+  if (S.drawMode === 'aoo' || S.drawMode === 'airspace-poly') ctx.fill();
+
+  // Draw dots
+  for (const pt of pts) {
+    ctx.fillStyle = '#14BDEB';
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(pt.cx, pt.cy, 4, 0, Math.PI*2);
+    ctx.setLineDash([]);
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function centroid(pts) {
+  const lon = pts.reduce((s,p)=>s+p.lon,0)/pts.length;
+  const lat = pts.reduce((s,p)=>s+p.lat,0)/pts.length;
+  return { lon, lat };
+}
+
+// Convex hull (Andrew's monotone chain) — reorders any set of lat/lon points
+// into the outermost perimeter, eliminating self-intersecting zigzags.
+function convexHull(pts) {
+  if (pts.length < 3) return pts;
+  const sorted = [...pts].sort((a, b) => a.lon !== b.lon ? a.lon - b.lon : a.lat - b.lat);
+  const cross = (O, A, B) =>
+    (A.lon - O.lon) * (B.lat - O.lat) - (A.lat - O.lat) * (B.lon - O.lon);
+  const lower = [];
+  for (const p of sorted) {
+    while (lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper = [];
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const p = sorted[i];
+    while (upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  lower.pop(); upper.pop();
+  return lower.concat(upper);
+}
+
+function hexToRgba(hex, alpha) {
+  if (!hex) return `rgba(0,0,0,${alpha})`;
+  // Handle already-converted rgb() / rgba() strings from browsers
+  if (hex.startsWith('rgb')) {
+    const nums = hex.match(/[\d.]+/g);
+    if (nums && nums.length >= 3) return `rgba(${nums[0]},${nums[1]},${nums[2]},${alpha})`;
+  }
+  const clean = hex.replace('#','');
+  const full = clean.length === 3 ? clean.split('').map(x=>x+x).join('') : clean;
+  const r = parseInt(full.slice(0,2),16);
+  const g = parseInt(full.slice(2,4),16);
+  const b = parseInt(full.slice(4,6),16);
+  if (isNaN(r)||isNaN(g)||isNaN(b)) return `rgba(0,0,0,${alpha})`;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CANVAS EVENTS
+// ═══════════════════════════════════════════════════════════════════════════
+let isPanning = false, panStart = { x:0, y:0 };
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 1 || (e.button === 0 && e.altKey)) {
+    isPanning = true;
+    panStart = { x: e.clientX - S.panX, y: e.clientY - S.panY };
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
+  if (e.button === 0) handleMapClick(e);
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (isPanning) {
+    S.panX = e.clientX - panStart.x;
+    S.panY = e.clientY - panStart.y;
+    render();
+    updateZoomStatus();
+    return;
+  }
+  const rect = canvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+  const coord = canvasToCoord(cx, cy);
+  const sb = document.getElementById('sb-coords');
+  if (coord) {
+    sb.innerHTML = `Cursor — <span>${formatLat(coord.lat)}  ${formatLon(coord.lon)}</span>`;
+  } else {
+    const ip = canvasToimgPx(cx, cy);
+    sb.innerHTML = `Cursor — <span>px (${Math.round(ip.px)}, ${Math.round(ip.py)})</span>`;
+  }
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (isPanning) {
+    isPanning = false;
+    canvas.style.cursor = S.drawMode ? 'crosshair' : 'default';
+    saveToStorage();
+  }
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+  const factor = e.deltaY < 0 ? 1.12 : 0.89;
+  const newZoom = Math.max(0.05, Math.min(20, S.zoom * factor));
+  S.panX = cx - (cx - S.panX) * (newZoom / S.zoom);
+  S.panY = cy - (cy - S.panY) * (newZoom / S.zoom);
+  S.zoom = newZoom;
+  render();
+  updateZoomStatus();
+}, { passive: false });
+
+canvas.addEventListener('dblclick', e => {
+  if (S.drawMode === 'aoo' || S.drawMode === 'airspace-poly' || S.drawMode === 'airspace-line') {
+    finishDraw();
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') cancelDraw();
+  if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey||e.metaKey) && S.drawPoints.length > 0) {
+    S.drawPoints.pop(); render();
+  }
+});
+
+function handleMapClick(e) {
+  const rect = canvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+  const ip = canvasToimgPx(cx, cy);
+  const coord = imgPxToCoord(ip.px, ip.py);
+
+  if (S.drawMode === 'calib-pick') {
+    S.pendingCalibPoint = { px: Math.round(ip.px), py: Math.round(ip.py) };
+    closeDrawMode();
+    populateCalibPointRow(S.pendingCalibPoint);
+    return;
+  }
+
+  if (S.drawMode === 'waypoint') {
+    if (!coord) { alert('Map is not calibrated. Please calibrate first.'); return; }
+    fillWaypointCoord(S.drawTarget, coord);
+    closeDrawMode();
+    return;
+  }
+
+  if (S.drawMode === 'datum-pick') {
+    if (!coord) { alert('Map is not calibrated. Please calibrate first.'); return; }
+    fillDatumCoord(coord);
+    closeDrawMode();
+    openModal('modal-datum');
+    return;
+  }
+
+  if (S.drawMode === 'mission-datum-pick') {
+    if (!coord) { alert('Map is not calibrated. Please calibrate first.'); return; }
+    fillMissionDatumCoord(S.drawTarget, coord);
+    closeDrawMode();
+    openModal('modal-mission');
+    renderRouteList();
+    return;
+  }
+
+  if (S.drawMode === 'route-item-pick') {
+    if (!coord) { alert('Map is not calibrated. Please calibrate first.'); return; }
+    fillRouteItemCoord(S.drawTarget, coord);
+    closeDrawMode();
+    openModal('modal-mission');
+    renderRouteList();
+    return;
+  }
+
+  if (S.drawMode === 'aoo' || S.drawMode === 'airspace-poly' || S.drawMode === 'airspace-line') {
+    if (!coord) { alert('Map is not calibrated. Please calibrate first.'); return; }
+    S.drawPoints.push({ cx, cy, lon: coord.lon, lat: coord.lat });
+    render();
+    return;
+  }
+
+  // Hit-testing: mission first, then airspace
+  if (!S.drawMode) {
+    const mHit = findMissionHit(ip.px, ip.py);
+    if (mHit) {
+      closeAssetInfoPanel();
+      showMissionInfoPanel(mHit.mission, mHit.wpIdx);
+      return;
+    }
+    const aHit = findAirspaceHit(ip.px, ip.py);
+    if (aHit) {
+      closeMissionInfoPanel();
+      showAssetInfoPanel(aHit);
+      return;
+    }
+    closeMissionInfoPanel();
+    closeAssetInfoPanel();
+  }
+}
+
+function closeDrawMode() {
+  S.drawMode = null;
+  S.drawPoints = [];
+  S.drawTarget = null;
+  canvas.style.cursor = 'default';
+  document.getElementById('draw-mode-indicator').classList.remove('visible');
+}
+
+function cancelDraw() {
+  closeDrawMode();
+  S.pendingCalibPoint = null;
+  render();
+}
+
+function finishDraw() {
+  const pts = S.drawPoints.map(p => ({ lon: p.lon, lat: p.lat }));
+  const srcModal = S.drawSourceModal;
+  if (S.drawMode === 'aoo') {
+    if (pts.length >= 3) {
+      pts.forEach(pt => missionRouteItems.push({ id: uid(), type:'aoo', label:'', lat: pt.lat, lon: pt.lon, totEarly:'', totLate:'' }));
+    }
+  } else if (S.drawMode === 'airspace-poly' || S.drawMode === 'airspace-line') {
+    if (pts.length >= 2) S.tempAirspaceGeom = pts;
+  }
+  closeDrawMode();
+  S.drawSourceModal = null;
+  render();
+  if (srcModal === 'mission') {
+    openModal('modal-mission');
+    renderRouteList();
+  } else if (srcModal === 'airspace') {
+    openModal('modal-airspace');
+    updateAirspaceGeomStatus(S.tempAirspaceGeom?.length || 0);
+    renderAsGeomVertexList();
+  }
+}
+
+function startDraw(mode, label, target) {
+  S.drawMode = mode;
+  S.drawPoints = [];
+  S.drawTarget = target;
+  canvas.style.cursor = 'crosshair';
+  const ind = document.getElementById('draw-mode-indicator');
+  document.getElementById('draw-mode-text').textContent = label;
+  ind.classList.add('visible');
+}
+
+function updateZoomStatus() {
+  document.getElementById('sb-zoom-val').textContent = Math.round(S.zoom * 100) + '%';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MAP IMAGE LOADING
+// ═══════════════════════════════════════════════════════════════════════════
+function loadMapImage(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('map-file-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    S.baseImageSrc = ev.target.result;
+    loadImageFromSrc(ev.target.result);
+    saveToStorage();
+  };
+  reader.readAsDataURL(file);
+}
+
+function loadImageFromSrc(src) {
+  const img = new Image();
+  img.onload = () => {
+    S.baseImage = img;
+    // Fit image to canvas on first load
+    if (S.panX === 0 && S.panY === 0 && S.zoom === 1) fitImageToCanvas();
+    render();
+  };
+  img.src = src;
+}
+
+function fitImageToCanvas() {
+  if (!S.baseImage) return;
+  const cont = document.getElementById('canvas-container');
+  const scaleX = cont.clientWidth / S.baseImage.width;
+  const scaleY = cont.clientHeight / S.baseImage.height;
+  S.zoom = Math.min(scaleX, scaleY) * 0.95;
+  S.panX = (cont.clientWidth  - S.baseImage.width  * S.zoom) / 2;
+  S.panY = (cont.clientHeight - S.baseImage.height * S.zoom) / 2;
+  updateZoomStatus();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CALIBRATION UI
+// ═══════════════════════════════════════════════════════════════════════════
+function openCalibrationModal() {
+  renderCalibTable();
+  openModal('modal-calib');
+}
+
+function renderCalibTable() {
+  const tbody = document.getElementById('calib-tbody');
+  tbody.innerHTML = '';
+  S.calibPoints.forEach((pt, i) => {
+    tbody.appendChild(calibRow(i, pt));
+  });
+  updateCalibScale();
+}
+
+function calibRow(i, pt) {
+  const tr = document.createElement('tr');
+  tr.dataset.idx = i;
+  tr.innerHTML = `
+    <td style="font-weight:700;color:var(--accent);padding:4px 6px;">${i+1}</td>
+    <td><span class="calib-pixel">(${pt.px}, ${pt.py})</span></td>
+    <td><input class="input mono coord-lat" style="width:92px" placeholder="012048N"  value="${pt.lat != null ? fmtLat(pt.lat) : ''}" oninput="updateCalibCoord(${i})"></td>
+    <td><input class="input mono coord-lon" style="width:100px" placeholder="1042424E" value="${pt.lon != null ? fmtLon(pt.lon) : ''}" oninput="updateCalibCoord(${i})"></td>
+    <td><button class="btn-xs danger" onclick="removeCalibPoint(${i})">✕</button></td>`;
+  return tr;
+}
+
+function updateCalibCoord(i) {
+  const row = document.querySelector(`#calib-tbody tr[data-idx="${i}"]`);
+  if (!row) return;
+  const lat = parseCompactDMS(row.querySelector('.coord-lat').value);
+  const lon = parseCompactDMS(row.querySelector('.coord-lon').value);
+  if (lat !== null) S.calibPoints[i].lat = lat;
+  if (lon !== null) S.calibPoints[i].lon = lon;
+  updateCalibScale();
+}
+
+function updateCalibScale() {
+  const el = document.getElementById('calib-scale');
+  if (S.calibPoints.length < 2) { el.classList.add('hidden'); return; }
+  const t = computeTransform(S.calibPoints);
+  el.classList.remove('hidden');
+  if (t) {
+    el.textContent = `Scale: ≈ ${t.scaleDegreesPerPx.toExponential(3)}°/px  (≈ ${Math.round(t.scaleMetersPerPx)}m/px)`;
+  } else {
+    el.textContent = 'Cannot compute transform — check point values.';
+  }
+}
+
+function addCalibPoint() {
+  startDraw('calib-pick', 'CLICK A REFERENCE POINT ON MAP', null);
+  closeModal('modal-calib');
+}
+
+function populateCalibPointRow(pixelPt) {
+  S.calibPoints.push({ px: pixelPt.px, py: pixelPt.py, lat: 0, lon: 0 });
+  openModal('modal-calib');
+  renderCalibTable();
+}
+
+function removeCalibPoint(i) {
+  S.calibPoints.splice(i, 1);
+  renderCalibTable();
+}
+
+function clearCalibration() {
+  if (!confirm('Clear all calibration points?')) return;
+  S.calibPoints = [];
+  S.transform = null;
+  renderCalibTable();
+  updateStatusBar();
+  render();
+}
+
+function applyCalibration() {
+  if (S.calibPoints.length < 2) { alert('Add at least 2 calibration points.'); return; }
+  S.transform = computeTransform(S.calibPoints);
+  if (!S.transform) { alert('Could not compute transform — ensure points are not collinear.'); return; }
+  updateStatusBar();
+  saveToStorage();
+  closeModal('modal-calib');
+  render();
+}
+
+function updateStatusBar() {
+  const sv = document.getElementById('sb-scale-val');
+  const cv = document.getElementById('sb-calib-val');
+  if (S.transform) {
+    sv.textContent = `≈ ${Math.round(S.transform.scaleMetersPerPx)}m/px`;
+    cv.textContent = '✓ calibrated';
+    cv.style.color = '#16a34a';
+  } else {
+    sv.textContent = 'uncalibrated';
+    cv.textContent = '✕ none';
+    cv.style.color = '#dc2626';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MISSION MODAL
+// ═══════════════════════════════════════════════════════════════════════════
+let editingMissionId = null;
+let missionRouteItems = []; // unified: {id, type:'wpt'|'dat'|'aoo', label, lat, lon, totEarly, totLate}
+
+function openMissionModal(mission) {
+  editingMissionId   = mission ? mission.id : null;
+  missionRouteItems = [];
+  if (mission) {
+    (mission.waypoints||[]).forEach(w => missionRouteItems.push({ id: uid(), type:'wpt', label: w.label||'', lat: w.lat, lon: w.lon, totEarly: w.totEarly||'', totLate: w.totLate||'' }));
+    (mission.datumPoints||[]).forEach(d => missionRouteItems.push({ id: uid(), type:'dat', label: d.label||'', lat: d.lat, lon: d.lon, totEarly:'', totLate:'' }));
+    (mission.aoo||[]).forEach(pt => missionRouteItems.push({ id: uid(), type:'aoo', label:'', lat: pt.lat, lon: pt.lon, totEarly:'', totLate:'' }));
+  }
+
+  document.getElementById('mission-modal-title').textContent = mission ? 'Edit Mission' : 'Add Mission';
+  document.getElementById('m-callsign').value  = mission?.callsign || '';
+  document.getElementById('m-acft-type').value = mission?.acftType || '';
+  document.getElementById('m-acft-count').value= mission?.acftCount || 1;
+  document.getElementById('m-dep').value  = mission?.depICAO || '';
+  document.getElementById('m-arr').value  = mission?.arrICAO || '';
+  document.getElementById('m-etd').value  = mission?.etd || '';
+  document.getElementById('m-eta').value  = mission?.eta || '';
+
+  // Color swatches
+  const sc = document.getElementById('mission-color-swatches');
+  sc.innerHTML = '';
+  const selColor = mission?.color || '#1a1a1a';
+  MISSION_COLORS.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'color-swatch' + (c === selColor ? ' selected' : '');
+    d.style.background = c;
+    d.dataset.color = c;
+    d.title = c;
+    if (c === '#1a1a1a') d.style.border = '1px solid #555';
+    d.onclick = () => { sc.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('selected')); d.classList.add('selected'); };
+    sc.appendChild(d);
+  });
+
+  const delBtn = document.getElementById('mission-delete-btn');
+  delBtn.classList.toggle('hidden', !mission);
+
+  renderRouteList();
+  openModal('modal-mission');
+}
+
+function getSelectedMissionColor() {
+  const sel = document.querySelector('#mission-color-swatches .color-swatch.selected');
+  return sel ? (sel.dataset.color || sel.style.background) : MISSION_COLORS[0];
+}
+
+// ── Unified Route Items ────────────────────────────────────────────────────
+function addRouteItem(type, mode) {
+  if (mode === 'assets') { openPickerForWaypoint(); return; }
+  missionRouteItems.push({ id: uid(), type, label: '', lat: null, lon: null, totEarly: '', totLate: '' });
+  renderRouteList();
+}
+
+function removeRouteItem(id) {
+  missionRouteItems = missionRouteItems.filter(x => x.id !== id);
+  renderRouteList();
+  render();
+}
+
+function updateRouteField(id, field, val) {
+  const item = missionRouteItems.find(x => x.id === id);
+  if (item) { item[field] = val; }
+}
+
+function updateRouteCoord(id, row) {
+  const item = missionRouteItems.find(x => x.id === id);
+  if (!item || !row) return;
+  const lat = parseCompactDMS(row.querySelector('.coord-lat')?.value);
+  const lon = parseCompactDMS(row.querySelector('.coord-lon')?.value);
+  if (lat != null) item.lat = lat;
+  if (lon != null) item.lon = lon;
+  render();
+}
+
+function applyRouteItemSource(id, select) {
+  const globalDp = S.datumPoints.find(d => d.id === select.value);
+  if (!globalDp) return;
+  const item = missionRouteItems.find(x => x.id === id);
+  if (!item) return;
+  item.label = globalDp.label;
+  item.lat   = globalDp.lat;
+  item.lon   = globalDp.lon;
+  const row = document.querySelector(`[data-rid="${id}"]`);
+  if (row) {
+    const lbl = row.querySelector('.wp-label-input');
+    const lat = row.querySelector('.coord-lat');
+    const lon = row.querySelector('.coord-lon');
+    if (lbl) lbl.value = item.label;
+    if (lat) lat.value = fmtLat(item.lat);
+    if (lon) lon.value = fmtLon(item.lon);
+  }
+  select.value = '';
+  render();
+}
+
+function pickRouteItemOnMap(id) {
+  S.drawSourceModal = null;
+  S.drawTarget = id;
+  closeModal('modal-mission');
+  startDraw('route-item-pick', 'CLICK POINT ON MAP', id);
+}
+
+function fillRouteItemCoord(id, coord) {
+  const item = missionRouteItems.find(x => x.id === id);
+  if (item) { item.lat = coord.lat; item.lon = coord.lon; }
+  renderRouteList();
+}
+
+function clearAooItems() {
+  missionRouteItems = missionRouteItems.filter(x => x.type !== 'aoo');
+  renderRouteList();
+  render();
+}
+
+function renderRouteList() {
+  const list = document.getElementById('route-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  // Show/hide AOO draw bar
+  const aooBar = document.getElementById('aoo-draw-bar');
+  if (aooBar) aooBar.style.display = missionRouteItems.some(x => x.type === 'aoo') ? 'flex' : 'none';
+
+  if (missionRouteItems.length === 0) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--text-4);padding:8px 0 4px">No route items added.</div>';
+    return;
+  }
+
+  const eligible = S.datumPoints.filter(d => d.lat != null && d.lon != null);
+  const optHtml = eligible.map(d => `<option value="${d.id}">${d.label}</option>`).join('');
+  const hasGlobal = eligible.length > 0;
+
+  // Count waypoints for numbering
+  let wptIdx = 0;
+
+  missionRouteItems.forEach((item) => {
+    const row = document.createElement('div');
+    row.className = 'waypoint-row';
+    row.dataset.rid = item.id;
+
+    let badge, badgeStyle, typeLabel;
+    if (item.type === 'wpt') {
+      wptIdx++;
+      badge = wptIdx;
+      badgeStyle = 'background:var(--accent);color:#032B43';
+      typeLabel = 'Waypoint';
+    } else if (item.type === 'dat') {
+      badge = '◆';
+      badgeStyle = 'background:var(--amber);color:#fff';
+      typeLabel = 'Datum';
+    } else {
+      badge = '▪';
+      badgeStyle = 'background:#10b981;color:#fff';
+      typeLabel = 'AOO Vertex';
+    }
+
+    const srcDropdown = (item.type !== 'aoo' && hasGlobal) ? `
+      <div style="padding:0 0 4px 0">
+        <select class="select mdp-src-select" style="height:26px;font-size:11px;width:auto;max-width:160px;color:var(--text-3)" onchange="applyRouteItemSource('${item.id}',this)" title="Import from existing datum">
+          <option value="">From existing…</option>
+          ${optHtml}
+        </select>
+      </div>` : '';
+
+    const timeRow = item.type === 'wpt' ? `
+      <div class="wp-time-row">
+        <label class="field-label">TOT</label>
+        <input class="input mono" style="width:72px" placeholder="0000H" value="${item.totEarly||''}" oninput="updateRouteField('${item.id}','totEarly',this.value)">
+        <label class="field-label" style="margin-left:6px">TOT Late</label>
+        <input class="input mono" style="width:72px" placeholder="0000H" value="${item.totLate||''}" oninput="updateRouteField('${item.id}','totLate',this.value)">
+      </div>` : '';
+
+    const aooVtxIdx = item.type === 'aoo' ? missionRouteItems.filter(x=>x.type==='aoo').indexOf(item)+1 : 0;
+
+    row.innerHTML = `
+      <div class="waypoint-row-header">
+        <div class="wp-num" style="${badgeStyle}">${badge}</div>
+        ${item.type !== 'aoo' ? `<input class="input wp-label-input" placeholder="${item.type==='dat'?'Datum label':'Label (optional)'}" value="${item.label||''}" oninput="updateRouteField('${item.id}','label',this.value)">` : `<span style="font-size:11px;color:var(--text-3);flex:1">AOO Vertex ${aooVtxIdx}</span>`}
+        <button class="wp-del" onclick="removeRouteItem('${item.id}')">✕</button>
+      </div>
+      ${srcDropdown}
+      <div class="wp-coord-row" style="gap:5px;flex-wrap:nowrap">
+        <input class="input mono coord-lat" style="flex:1;min-width:0" placeholder="012048N"  value="${item.lat != null ? fmtLat(item.lat) : ''}" oninput="updateRouteCoord('${item.id}',this.closest('[data-rid]'))">
+        <input class="input mono coord-lon" style="flex:1;min-width:0" placeholder="1042424E" value="${item.lon != null ? fmtLon(item.lon) : ''}" oninput="updateRouteCoord('${item.id}',this.closest('[data-rid]'))">
+        <button class="wp-pick-btn" onclick="pickRouteItemOnMap('${item.id}')" title="Pick on map">📍</button>
+      </div>
+      ${timeRow}`;
+    list.appendChild(row);
+  });
+}
+
+// Keep old waypoint pick handler for backward compat with 'waypoint' draw mode
+function fillWaypointCoord(wpId, coord) {
+  fillRouteItemCoord(wpId, coord);
+  openModal('modal-mission');
+}
+
+// ── Shared vertex row builder ─────────────────────────────────────────────
+function buildVertexRowEl(i, lat, lon, onChangeFn, onRemoveFn) {
+  const div = document.createElement('div');
+  div.className = 'vertex-row';
+  div.dataset.idx = i;
+  div.innerHTML = `
+    <span class="vx-num">${i+1}</span>
+    <input class="input mono coord-lat" style="flex:1;min-width:0;height:26px;padding:0 7px" placeholder="012048N"  value="${fmtLat(lat)}">
+    <input class="input mono coord-lon" style="flex:1;min-width:0;height:26px;padding:0 7px" placeholder="1042424E" value="${fmtLon(lon)}">
+    <button class="wp-del" style="flex-shrink:0" title="Remove">✕</button>`;
+
+  function fire() {
+    const newLat = parseCompactDMS(div.querySelector('.coord-lat').value);
+    const newLon = parseCompactDMS(div.querySelector('.coord-lon').value);
+    if (newLat != null && newLon != null) onChangeFn(i, newLat, newLon);
+  }
+  div.querySelectorAll('input').forEach(inp => inp.addEventListener('input', fire));
+  div.querySelector('.wp-del').addEventListener('click', () => onRemoveFn(i));
+  return div;
+}
+
+// ── Area of Ops ────────────────────────────────────────────────────────────
+function startAooDraw() {
+  S.drawSourceModal = 'mission';
+  closeModal('modal-mission');
+  startDraw('aoo', 'DRAW AOO POLYGON — dbl-click to finish', null);
+}
+
+// Keep legacy functions so any external references don't break
+function clearAoo() {
+  clearAooItems();
+}
+
+function addAooVertexManual() {
+  addRouteItem('aoo', 'manual');
+}
+
+function renderAooVertexList() {
+  // Legacy stub — AOO vertices are now part of route-list
+}
+
+function updateAooStatus(ptCount) {
+  // Legacy stub — status now handled by aoo-draw-bar visibility
+}
+
+// ── Save Mission ───────────────────────────────────────────────────────────
+function saveMission() {
+  const callsign = document.getElementById('m-callsign').value.trim();
+  if (!callsign) { alert('Callsign is required.'); return; }
+  const color = getSelectedMissionColor() || MISSION_COLORS[0];
+
+  const missionData = {
+    id: editingMissionId || uid(),
+    callsign,
+    acftType:   document.getElementById('m-acft-type').value.trim(),
+    acftCount:  parseInt(document.getElementById('m-acft-count').value) || 1,
+    depICAO:    document.getElementById('m-dep').value.trim().toUpperCase(),
+    arrICAO:    document.getElementById('m-arr').value.trim().toUpperCase(),
+    etd:        document.getElementById('m-etd').value.trim(),
+    eta:        document.getElementById('m-eta').value.trim(),
+    color,
+    waypoints:    missionRouteItems.filter(x=>x.type==='wpt').map(x=>({ id:x.id, label:x.label, lat:x.lat, lon:x.lon, totEarly:x.totEarly, totLate:x.totLate })),
+    datumPoints:  missionRouteItems.filter(x=>x.type==='dat').map(x=>({ id:x.id, label:x.label, lat:x.lat, lon:x.lon })),
+    aoo:          missionRouteItems.some(x=>x.type==='aoo') ? missionRouteItems.filter(x=>x.type==='aoo').map(x=>({ lat:x.lat, lon:x.lon })) : null,
+  };
+
+  if (editingMissionId) {
+    const idx = S.missions.findIndex(m => m.id === editingMissionId);
+    if (idx >= 0) S.missions[idx] = missionData;
+  } else {
+    S.missions.push(missionData);
+    S.visibleMissions.add(missionData.id);
+  }
+
+  closeModal('modal-mission');
+  saveToStorage();
+  refreshAll();
+}
+
+function deleteCurrentMission() {
+  if (!editingMissionId) return;
+  if (!confirm('Delete this mission?')) return;
+  S.missions = S.missions.filter(m => m.id !== editingMissionId);
+  S.visibleMissions.delete(editingMissionId);
+  if (S.selectedMission === editingMissionId) S.selectedMission = null;
+  closeModal('modal-mission');
+  saveToStorage();
+  refreshAll();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AIRSPACE MODAL
+// ═══════════════════════════════════════════════════════════════════════════
+let editingAirspaceId = null;
+let selectedAirspaceType = 'airway';
+
+function openAirspaceModal(airspace) {
+  editingAirspaceId = airspace ? airspace.id : null;
+  selectedAirspaceType = airspace?.type || 'airway';
+  S.tempAirspaceGeom = airspace ? (airspace.points ? JSON.parse(JSON.stringify(airspace.points)) : null) : null;
+
+  document.getElementById('airspace-modal-title').textContent = airspace ? 'Edit Airspace' : 'Add Airspace';
+  document.getElementById('as-designator').value = airspace?.designator || '';
+  document.getElementById('as-lower').value = airspace?.lower || '';
+  document.getElementById('as-upper').value = airspace?.upper || '';
+
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('selected', b.dataset.type === selectedAirspaceType));
+  const delBtn = document.getElementById('airspace-delete-btn');
+  delBtn.classList.toggle('hidden', !airspace);
+  updateAirspaceGeomStatus(S.tempAirspaceGeom ? S.tempAirspaceGeom.length : 0);
+  renderAsGeomVertexList();
+  openModal('modal-airspace');
+}
+
+function selectAirspaceType(type) {
+  selectedAirspaceType = type;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('selected', b.dataset.type === type));
+}
+
+function startAirspaceDraw() {
+  S.drawSourceModal = 'airspace';
+  const isLine = selectedAirspaceType === 'airway';
+  closeModal('modal-airspace');
+  startDraw(isLine ? 'airspace-line' : 'airspace-poly',
+    isLine ? 'DRAW AIRWAY — dbl-click to finish' : 'DRAW BOUNDARY — dbl-click to finish', null);
+}
+
+function clearAirspaceGeom() {
+  S.tempAirspaceGeom = null;
+  updateAirspaceGeomStatus(0);
+  renderAsGeomVertexList();
+  render();
+}
+
+function addAsVertexManual() {
+  if (!S.tempAirspaceGeom) S.tempAirspaceGeom = [];
+  S.tempAirspaceGeom.push({ lat: 0, lon: 0 });
+  updateAirspaceGeomStatus(S.tempAirspaceGeom.length);
+  renderAsGeomVertexList();
+}
+
+function renderAsGeomVertexList() {
+  const list = document.getElementById('as-vertex-list');
+  if (!list) return;
+  list.innerHTML = '';
+  (S.tempAirspaceGeom || []).forEach((pt, i) => {
+    list.appendChild(buildVertexRowEl(i, pt.lat, pt.lon,
+      (idx, lat, lon) => { S.tempAirspaceGeom[idx] = { lat, lon }; render(); },
+      (idx) => {
+        S.tempAirspaceGeom.splice(idx, 1);
+        if (S.tempAirspaceGeom.length === 0) S.tempAirspaceGeom = null;
+        updateAirspaceGeomStatus(S.tempAirspaceGeom?.length || 0);
+        renderAsGeomVertexList();
+        render();
+      }
+    ));
+  });
+}
+
+function updateAirspaceGeomStatus(ptCount) {
+  const el = document.getElementById('as-geom-status');
+  if (ptCount >= 2) {
+    el.textContent = `✓ ${ptCount} points defined.`;
+  } else {
+    el.textContent = 'No geometry defined. Draw on map or import a file.';
+  }
+}
+
+function importAirspaceGeom(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const pts = parseGeoFile(ev.target.result, file.name);
+      if (pts && pts.length >= 2) {
+        S.tempAirspaceGeom = pts;
+        updateAirspaceGeomStatus(pts.length);
+        renderAsGeomVertexList();
+      } else { alert('No valid geometry found in file.'); }
+    } catch(err) { alert('Parse error: ' + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function parseGeoFile(text, filename) {
+  if (filename.toLowerCase().endsWith('.kml')) return parseKML(text);
+  // GeoJSON
+  const geo = JSON.parse(text);
+  const coords = [];
+  const extractCoords = c => { if (Array.isArray(c[0])) c.forEach(extractCoords); else coords.push({ lon: c[0], lat: c[1] }); };
+  const extractGeom = g => { if (!g) return; if (g.type==='FeatureCollection') g.features.forEach(f=>extractGeom(f.geometry)); else if (g.type==='Feature') extractGeom(g.geometry); else if (g.coordinates) extractCoords(g.coordinates); };
+  extractGeom(geo);
+  return coords;
+}
+
+function parseKML(text) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text, 'text/xml');
+  const coords = [];
+  doc.querySelectorAll('coordinates').forEach(el => {
+    el.textContent.trim().split(/\s+/).forEach(pair => {
+      const parts = pair.split(',');
+      if (parts.length >= 2) coords.push({ lon: parseFloat(parts[0]), lat: parseFloat(parts[1]) });
+    });
+  });
+  return coords;
+}
+
+function saveAirspace() {
+  const designator = document.getElementById('as-designator').value.trim();
+  if (!designator) { alert('Designator is required.'); return; }
+  if (!S.tempAirspaceGeom || S.tempAirspaceGeom.length < 2) { alert('Add geometry first (draw or import).'); return; }
+
+  const asData = {
+    id: editingAirspaceId || uid(),
+    type: selectedAirspaceType,
+    designator,
+    lower: document.getElementById('as-lower').value.trim(),
+    upper: document.getElementById('as-upper').value.trim(),
+    points: S.tempAirspaceGeom,
+  };
+
+  if (editingAirspaceId) {
+    const idx = S.airspaces.findIndex(a => a.id === editingAirspaceId);
+    if (idx >= 0) S.airspaces[idx] = asData;
+  } else {
+    S.airspaces.push(asData);
+  }
+
+  closeModal('modal-airspace');
+  saveToStorage();
+  refreshAll();
+}
+
+function deleteCurrentAirspace() {
+  if (!editingAirspaceId) return;
+  if (!confirm('Delete this airspace?')) return;
+  S.airspaces = S.airspaces.filter(a => a.id !== editingAirspaceId);
+  closeModal('modal-airspace');
+  saveToStorage();
+  refreshAll();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  GLOBAL DATUM POINTS
+// ═══════════════════════════════════════════════════════════════════════════
+const DATUM_COLORS = ['#f59e0b','#14BDEB','#10b981','#f43f5e','#8b5cf6','#fb923c','#fff','#032B43'];
+let editingDatumId = null;
+
+function openDatumModal(datum, defaults = {}) {
+  editingDatumId = datum ? datum.id : null;
+  document.getElementById('datum-modal-title').textContent = datum ? 'Edit Datum Point' : 'Add Datum Point';
+  document.getElementById('dp-label').value   = datum?.label  || '';
+  document.getElementById('dp-symbol').value  = datum?.symbol || defaults.symbol || 'diamond';
+
+  const sc = document.getElementById('datum-color-swatches');
+  sc.innerHTML = '';
+  const selColor = datum?.color || defaults.color || DATUM_COLORS[0];
+  DATUM_COLORS.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'color-swatch' + (c === selColor ? ' selected' : '');
+    d.style.background = c;
+    d.dataset.color = c;
+    d.style.border = c === '#fff' ? '1px solid #ccc' : (c === '#032B43' ? '1px solid #555' : '');
+    d.onclick = () => { sc.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('selected')); d.classList.add('selected'); };
+    sc.appendChild(d);
+  });
+
+  document.getElementById('dp-lat').value = datum?.lat != null ? fmtLat(datum.lat) : '';
+  document.getElementById('dp-lon').value = datum?.lon != null ? fmtLon(datum.lon) : '';
+
+  document.getElementById('datum-delete-btn').classList.toggle('hidden', !datum);
+  openModal('modal-datum');
+}
+
+function pickDatumOnMap() {
+  closeModal('modal-datum');
+  S.drawSourceModal = 'datum';
+  startDraw('datum-pick', 'CLICK DATUM LOCATION', null);
+}
+
+function fillDatumCoord(coord) {
+  document.getElementById('dp-lat').value = fmtLat(coord.lat);
+  document.getElementById('dp-lon').value = fmtLon(coord.lon);
+}
+
+function readDatumDms() {
+  const lat = parseCompactDMS(document.getElementById('dp-lat').value);
+  const lon = parseCompactDMS(document.getElementById('dp-lon').value);
+  return { lat: lat ?? 0, lon: lon ?? 0 };
+}
+
+function saveDatum(addAnother = false) {
+  const label = document.getElementById('dp-label').value.trim();
+  if (!label) { alert('Label is required.'); return; }
+  const { lat, lon } = readDatumDms();
+  const selSwatch = document.querySelector('#datum-color-swatches .color-swatch.selected');
+  const color = selSwatch ? (selSwatch.dataset.color || selSwatch.style.background) : DATUM_COLORS[0];
+  const symbol = document.getElementById('dp-symbol').value;
+  const dp = { id: editingDatumId || uid(), label, symbol, color, lat, lon, visible: true };
+  if (editingDatumId) {
+    const idx = S.datumPoints.findIndex(d => d.id === editingDatumId);
+    if (idx >= 0) S.datumPoints[idx] = dp;
+  } else {
+    S.datumPoints.push(dp);
+  }
+  saveToStorage(); refreshAll();
+  if (addAnother) {
+    // Keep same symbol/color, clear label and coords for next entry
+    openDatumModal(null, { symbol, color });
+  } else {
+    closeModal('modal-datum');
+  }
+}
+
+function deleteCurrentDatum() {
+  if (!editingDatumId || !confirm('Delete this datum point?')) return;
+  S.datumPoints = S.datumPoints.filter(d => d.id !== editingDatumId);
+  closeModal('modal-datum');
+  saveToStorage(); refreshAll();
+}
+
+function saveDatumAndAddAnother() {
+  saveDatum(true);
+}
+
+function toggleSingleHemi(btnId, opts) {
+  const btn = document.getElementById(btnId);
+  const next = opts[(opts.indexOf(btn.dataset.hemi)+1)%2];
+  btn.dataset.hemi = next; btn.textContent = next;
+  btn.classList.toggle('active', next === opts[0]);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  FILTERS / ASSETS MODAL
+// ═══════════════════════════════════════════════════════════════════════════
+let activeFilterTab = 'all';
+
+function openFiltersModal() { switchRightPanel('assets'); }
+
+function switchRightPanel(tab) {
+  const isMissions = tab === 'missions';
+  document.getElementById('rp-missions').classList.toggle('hidden', !isMissions);
+  document.getElementById('rp-assets').classList.toggle('hidden', isMissions);
+  document.querySelectorAll('.rpanel-tab').forEach(b => b.classList.toggle('active', b.dataset.rt === tab));
+  if (!isMissions) renderFiltersList();
+}
+
+function switchFilterTab(tab) {
+  activeFilterTab = tab;
+  document.querySelectorAll('.filter-tab, .asset-type-pill').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  const fsi = document.getElementById('panel-filter-search'); if (fsi) fsi.value = '';
+  renderFiltersList();
+}
+
+function renderFiltersList() {
+  const query  = (document.getElementById('panel-filter-search')?.value || '').toLowerCase();
+  const tab    = activeFilterTab;
+  const list   = document.getElementById('filters-list');
+  list.innerHTML = '';
+  let count = 0;
+
+  const addRow = (id, colorHex, name, typeLabel, visVal, onVis, onEdit, onDel, warn) => {
+    const row = document.createElement('div');
+    row.className = 'asset-row';
+    row.innerHTML = `
+      <div class="asset-row-top">
+        <div class="asset-color" style="background:${colorHex};${colorHex==='#fff'?'border:1px solid #ccc':''}"></div>
+        <span class="asset-name" title="${name}">${name}</span>
+        <button class="vis-toggle ${visVal?'on':'off'}" title="${visVal?'Visible — click to hide':'Hidden — click to show'}"></button>
+      </div>
+      <div class="asset-row-bot">
+        <span class="asset-type">${typeLabel}</span>
+        ${warn ? `<span class="asset-warn" title="${warn}">⚠ ${warn}</span>` : ''}
+        <span style="flex:1"></span>
+        <button class="btn-xs" title="Edit">✎ Edit</button>
+        <button class="btn-xs danger" title="Delete">✕ Del</button>
+      </div>`;
+    const vtoggle = row.querySelector('.vis-toggle');
+    vtoggle.onclick = () => { onVis(!vtoggle.classList.contains('on')); vtoggle.classList.toggle('on'); vtoggle.classList.toggle('off'); vtoggle.title = vtoggle.classList.contains('on') ? 'Visible — click to hide' : 'Hidden — click to show'; render(); };
+    row.querySelectorAll('.btn-xs')[0].onclick = onEdit;
+    row.querySelectorAll('.btn-xs')[1].onclick = onDel;
+    list.appendChild(row);
+    count++;
+  };
+
+  // Datum Points
+  if (tab === 'all' || tab === 'datums') {
+    S.datumPoints.filter(d => !query || d.label.toLowerCase().includes(query)).forEach(dp => {
+      const noCoord = (dp.lat == null || dp.lon == null);
+      addRow(dp.id, dp.color||'#f59e0b', dp.label, `Datum · ${dp.symbol||'diamond'}`,
+        dp.visible !== false,
+        (v) => { dp.visible = v; saveToStorage(); },
+        () => { openDatumModal(dp); switchRightPanel('missions'); },
+        () => { if (confirm(`Delete "${dp.label}"?`)) { S.datumPoints = S.datumPoints.filter(d=>d.id!==dp.id); saveToStorage(); refreshAll(); renderFiltersList(); } },
+        noCoord ? 'no coords' : null
+      );
+    });
+  }
+
+  // Airspaces
+  if (tab === 'all' || tab === 'airspace') {
+    S.airspaces.filter(a => !query || a.designator?.toLowerCase().includes(query)).forEach(as => {
+      const typeLabel = { airway:'Airway', dpr:'D/P/R', danger:'Danger (D)', prohibited:'Prohibited (P)', restricted:'Restricted (R)', exercise:'Exercise' }[as.type] || as.type;
+      const col = DPR_COLORS[as.type]?.stroke || DPR_COLORS[as.subtype?.toLowerCase()]?.stroke || '#032B43';
+      const noGeom = (!as.points || as.points.length < 2);
+      addRow(as.id, col, as.designator||'(unnamed)', typeLabel,
+        as.visible !== false,
+        (v) => { as.visible = v; saveToStorage(); },
+        () => { openAirspaceModal(as); },
+        () => { if (confirm(`Delete "${as.designator}"?`)) { S.airspaces = S.airspaces.filter(a=>a.id!==as.id); saveToStorage(); refreshAll(); renderFiltersList(); } },
+        noGeom ? 'no geometry' : null
+      );
+    });
+  }
+
+  // Missions
+  if (tab === 'all' || tab === 'missions') {
+    S.missions.filter(m => !query || m.callsign.toLowerCase().includes(query)).forEach(m => {
+      const vis = S.visibleMissions.has(m.id);
+      const wpCount = m.waypoints?.length || 0;
+      addRow(m.id, m.color, m.callsign, `Mission · ${m.numAircraft||m.acftCount||'?'}× ${m.aircraftType||m.acftType||'—'}`,
+        vis,
+        (v) => { if (v) S.visibleMissions.add(m.id); else S.visibleMissions.delete(m.id); saveToStorage(); updateAssetFilterList(); updateMissionCards(); },
+        () => { openMissionModal(m); switchRightPanel('missions'); },
+        () => { if (confirm(`Delete mission "${m.callsign}"?`)) { S.missions = S.missions.filter(x=>x.id!==m.id); S.visibleMissions.delete(m.id); saveToStorage(); refreshAll(); renderFiltersList(); } },
+        wpCount === 0 ? 'no waypoints' : null
+      );
+    });
+  }
+
+  if (count === 0) list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);font-size:12px">No assets found.</div>';
+  document.getElementById('filters-count').textContent = `${count} asset${count!==1?'s':''}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ASSET PICKER (datums + exercise airspace → airspace geometry or waypoints)
+// ═══════════════════════════════════════════════════════════════════════════
+let pickerMode    = null; // 'airspace' | 'waypoint'
+let pickerTarget  = null; // waypoint id when mode=waypoint
+let pickerFilter  = 'all';
+let pickerTray    = [];   // ordered selection (for airspace mode)
+
+function openPickerForAirspace() {
+  pickerMode   = 'airspace';
+  pickerTarget = null;
+  pickerTray   = [];
+  pickerFilter = 'all';
+  document.getElementById('picker-title').textContent = 'Build Geometry from Assets';
+  document.getElementById('picker-tray').classList.remove('hidden');
+  document.getElementById('picker-apply-btn').classList.remove('hidden');
+  document.querySelectorAll('#picker-type-filter .type-btn').forEach(b => b.classList.toggle('selected', b.dataset.pf === 'all'));
+  document.getElementById('picker-search').value = '';
+  renderPickerTray();
+  renderPickerList();
+  closeModal('modal-airspace');
+  openModal('modal-picker');
+}
+
+function openPickerForWaypoint() {
+  pickerMode   = 'waypoint';
+  pickerTarget = null;
+  pickerTray   = [];
+  pickerFilter = 'all';
+  document.getElementById('picker-title').textContent = 'Insert Waypoint from Asset';
+  document.getElementById('picker-tray').classList.add('hidden');
+  document.getElementById('picker-apply-btn').classList.add('hidden');
+  document.querySelectorAll('#picker-type-filter .type-btn').forEach(b => b.classList.toggle('selected', b.dataset.pf === 'all'));
+  document.getElementById('picker-search').value = '';
+  renderPickerList();
+  closeModal('modal-mission');
+  openModal('modal-picker');
+}
+
+function switchPickerFilter(f) {
+  pickerFilter = f;
+  document.querySelectorAll('#picker-type-filter .type-btn').forEach(b => b.classList.toggle('selected', b.dataset.pf === f));
+  renderPickerList();
+}
+
+function getPickerAssets() {
+  const q = document.getElementById('picker-search')?.value.toLowerCase() || '';
+  const assets = [];
+  if (pickerFilter !== 'exercise') {
+    S.datumPoints.forEach(dp => {
+      if (dp.lat == null) return;
+      if (q && !dp.label.toLowerCase().includes(q)) return;
+      assets.push({ type:'datum', id:dp.id, label:dp.label, lat:dp.lat, lon:dp.lon, color:dp.color||'#f59e0b', sym: dp.symbol||'diamond' });
+    });
+  }
+  if (pickerFilter !== 'datums') {
+    S.airspaces.filter(a=>a.type==='exercise' && a.points?.length>=3).forEach(as => {
+      if (q && !as.designator?.toLowerCase().includes(q)) return;
+      const c = centroid(as.points);
+      assets.push({ type:'exercise', id:as.id, label:as.designator||'(unnamed)', lat:c.lat, lon:c.lon, color:'#6d28d9', sym:'⬡' });
+    });
+  }
+  return assets;
+}
+
+function renderPickerList() {
+  const list = document.getElementById('picker-list');
+  list.innerHTML = '';
+  const assets = getPickerAssets();
+  if (assets.length === 0) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--text-3);padding:8px">No matching assets. Add datum points or exercise airspace first.</div>';
+    return;
+  }
+  assets.forEach(a => {
+    const alreadyIn = pickerTray.some(t => t.id === a.id);
+    const row = document.createElement('div');
+    row.className = 'picker-row' + (alreadyIn ? ' selected-asset' : '');
+    if (pickerMode === 'waypoint') {
+      row.onclick = () => applyPickerToWaypoint(a.id);
+      row.style.cursor = 'pointer';
+    }
+    const coordStr = a.lat != null ? `${formatLat(a.lat)}  ${formatLon(a.lon)}` : 'No coord';
+    row.innerHTML = `
+      <span class="picker-sym" style="color:${a.color}">${a.type==='datum'?'◆':'⬡'}</span>
+      <div>
+        <div class="picker-name">${a.label}</div>
+        <div class="picker-coord">${coordStr}</div>
+      </div>
+      <div style="margin-left:auto;flex-shrink:0">
+        ${pickerMode==='airspace'
+          ? `<button class="btn-xs ${alreadyIn?'danger':''}" onclick="togglePickerTray('${a.id}')">${alreadyIn?'Remove':'+ Add'}</button>`
+          : `<span class="btn-xs" style="pointer-events:none">Use →</span>`
+        }
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+function togglePickerTray(assetId) {
+  const already = pickerTray.findIndex(t => t.id === assetId);
+  if (already >= 0) {
+    pickerTray.splice(already, 1);
+  } else {
+    const a = getPickerAssets().find(x => x.id === assetId);
+    if (a) pickerTray.push(a);
+  }
+  renderPickerTray();
+  renderPickerList();
+}
+
+function renderPickerTray() {
+  const trayList = document.getElementById('picker-tray-list');
+  const countEl  = document.getElementById('picker-tray-count');
+  trayList.innerHTML = '';
+  countEl.textContent = `(${pickerTray.length} point${pickerTray.length!==1?'s':''})`;
+  pickerTray.forEach((a, i) => {
+    const row = document.createElement('div');
+    row.className = 'vertex-row';
+    row.style.padding = '4px 8px';
+    row.innerHTML = `
+      <span class="vx-num">${i+1}</span>
+      <span style="font-size:12px;font-weight:700;flex:1;color:${a.color}">${a.label}</span>
+      <span style="font-size:10px;color:var(--text-3);font-family:monospace">${formatLat(a.lat)} ${formatLon(a.lon)}</span>
+      ${i>0?`<button class="wp-del" style="margin-left:4px" onclick="moveTrayItem(${i},-1)">↑</button>`:'<span style="width:22px"></span>'}
+      ${i<pickerTray.length-1?`<button class="wp-del" onclick="moveTrayItem(${i},1)">↓</button>`:'<span style="width:22px"></span>'}
+      <button class="wp-del" onclick="togglePickerTray('${a.id}')">✕</button>`;
+    trayList.appendChild(row);
+  });
+}
+
+function moveTrayItem(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= pickerTray.length) return;
+  [pickerTray[i], pickerTray[j]] = [pickerTray[j], pickerTray[i]];
+  renderPickerTray();
+}
+
+function applyPickerSelection() {
+  if (pickerTray.length < 2) { alert('Select at least 2 points.'); return; }
+  S.tempAirspaceGeom = pickerTray.map(a => ({ lat: a.lat, lon: a.lon }));
+  closeModal('modal-picker');
+  openModal('modal-airspace');
+  updateAirspaceGeomStatus(S.tempAirspaceGeom.length);
+  renderAsGeomVertexList();
+}
+
+function applyPickerToWaypoint(assetId) {
+  const a = getPickerAssets().find(x => x.id === assetId);
+  if (!a) return;
+  missionRouteItems.push({ id: uid(), type:'wpt', label: a.label, lat: a.lat, lon: a.lon, totEarly:'', totLate:'' });
+  closeModal('modal-picker');
+  openModal('modal-mission');
+  renderRouteList();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MISSION DATUM POINTS (legacy stubs — data now handled via missionRouteItems)
+// ═══════════════════════════════════════════════════════════════════════════
+function fillMissionDatumCoord(dpId, coord) {
+  fillRouteItemCoord(dpId, coord);
+}
+
+function pickMissionDatumOnMap(dpId) {
+  pickRouteItemOnMap(dpId);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MAP HIGHLIGHT / PULSE ANIMATION
+// ═══════════════════════════════════════════════════════════════════════════
+let _pulseRaf = null;
+function highlightMapPoint(lon, lat) {
+  S.pulseTarget = { lon, lat, startTime: performance.now() };
+  if (_pulseRaf) cancelAnimationFrame(_pulseRaf);
+  function loop() {
+    render();
+    const elapsed = performance.now() - S.pulseTarget.startTime;
+    if (elapsed < 2400) {
+      _pulseRaf = requestAnimationFrame(loop);
+    } else {
+      S.pulseTarget = null;
+      _pulseRaf = null;
+      render();
+    }
+  }
+  _pulseRaf = requestAnimationFrame(loop);
+}
+
+function drawPulse(pt) {
+  const p = coordToImgPx(pt.lon, pt.lat);
+  if (!p) return;
+  const t = (performance.now() - pt.startTime) / 1000;
+  const overallAlpha = Math.max(0, 1 - t / 2.4);
+  ctx.save();
+  // Three expanding rings staggered
+  for (let i = 0; i < 3; i++) {
+    const phase = ((t * 1.4 + i * 0.33) % 1);
+    const radius = (6 + phase * 28) / S.zoom;
+    const alpha = overallAlpha * Math.max(0, 1 - phase) * 0.85;
+    ctx.beginPath();
+    ctx.arc(p.px, p.py, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(20,189,235,${alpha.toFixed(3)})`;
+    ctx.lineWidth = 2.5 / S.zoom;
+    ctx.stroke();
+  }
+  // Solid inner highlight ring
+  ctx.beginPath();
+  ctx.arc(p.px, p.py, 7 / S.zoom, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(20,189,235,${(overallAlpha * 0.9).toFixed(3)})`;
+  ctx.lineWidth = 2.5 / S.zoom;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  LAYER & MISSION LIST UI
+// ═══════════════════════════════════════════════════════════════════════════
+function setupLayerToggles() {
+  const map = [
+    ['lr-airways',  'airways'],
+    ['lr-dpr',      'dpr'],
+    ['lr-exercise', 'exercise'],
+    ['lr-routes',   'routes'],
+    ['lr-aoo',      'aoo'],
+    ['lr-datums',   'datums'],
+  ];
+  map.forEach(([elId, key]) => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.classList.toggle('checked', S.layers[key]);
+    el.addEventListener('click', () => {
+      S.layers[key] = !S.layers[key];
+      el.classList.toggle('checked', S.layers[key]);
+      el.classList.toggle('dimmed', !S.layers[key]);
+      saveToStorage();
+      render();
+    });
+  });
+}
+
+function updateAssetFilterList() {
+  const list = document.getElementById('asset-filter-list');
+  list.innerHTML = '';
+  if (S.missions.length === 0) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--text-4);padding:4px 4px;">No missions yet</div>';
+    return;
+  }
+  S.missions.forEach(m => {
+    const row = document.createElement('label');
+    row.className = 'layer-row ' + (S.visibleMissions.has(m.id) ? 'checked' : '');
+    row.innerHTML = `
+      <span class="layer-checkbox"></span>
+      <span class="layer-dot" style="background:${m.color}"></span>
+      <span class="layer-label">${m.callsign}</span>`;
+    row.addEventListener('click', () => {
+      if (S.visibleMissions.has(m.id)) S.visibleMissions.delete(m.id);
+      else S.visibleMissions.add(m.id);
+      row.classList.toggle('checked', S.visibleMissions.has(m.id));
+      row.classList.toggle('dimmed', !S.visibleMissions.has(m.id));
+      saveToStorage(); render();
+    });
+    list.appendChild(row);
+  });
+}
+
+function updateMissionCards() {
+  const list = document.getElementById('mission-list');
+  list.innerHTML = '';
+  if (S.missions.length === 0) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--text-3);padding:12px;text-align:center;">No missions added yet.</div>';
+    return;
+  }
+  S.missions.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'mission-card' + (m.id === S.selectedMission ? ' selected' : '');
+    card.innerHTML = `
+      <div class="mission-card-color" style="background:${m.color}"></div>
+      <div class="mission-card-inner">
+        <div class="mission-card-title">
+          <span class="callsign">${m.callsign}</span>
+          <span style="font-size:10px;font-weight:600;color:var(--text-3)">${m.acftCount}× ${m.acftType}</span>
+        </div>
+        <div class="mission-card-meta">
+          ${m.depICAO} → ${m.arrICAO}<br>
+          ${m.etd||'—'} – ${m.eta||'—'}<br>
+          ${m.waypoints?.length||0} WPT${m.datumPoints?.length ? ` · ${m.datumPoints.length} DP` : ''}${m.aoo?' · AOO':''}
+        </div>
+        <div class="mission-card-actions">
+          <button class="btn-xs" onclick="openMissionModal(getMission('${m.id}'))">Edit</button>
+          <button class="btn-xs" onclick="zoomToMission('${m.id}')">Zoom</button>
+        </div>
+      </div>`;
+    card.addEventListener('click', e => {
+      if (e.target.classList.contains('btn-xs')) return;
+      S.selectedMission = S.selectedMission === m.id ? null : m.id;
+      updateMissionCards(); render();
+    });
+    list.appendChild(card);
+  });
+}
+
+function getMission(id) { return S.missions.find(m => m.id === id); }
+
+function zoomToMission(id) {
+  const m = getMission(id);
+  if (!m || !S.transform) return;
+  const pts = [
+    ...(m.waypoints||[]).filter(w=>w.lat!=null).map(w=>({lon:w.lon,lat:w.lat})),
+    ...(m.aoo||[])
+  ];
+  if (pts.length === 0) return;
+  let minLon=Infinity,maxLon=-Infinity,minLat=Infinity,maxLat=-Infinity;
+  pts.forEach(p => { minLon=Math.min(minLon,p.lon); maxLon=Math.max(maxLon,p.lon); minLat=Math.min(minLat,p.lat); maxLat=Math.max(maxLat,p.lat); });
+  const p1 = coordToImgPx(minLon, minLat);
+  const p2 = coordToImgPx(maxLon, maxLat);
+  if (!p1 || !p2) return;
+  const padPx = 40;
+  const cont = document.getElementById('canvas-container');
+  const fitZ = Math.min(
+    (cont.clientWidth - padPx*2) / Math.abs(p2.px - p1.px),
+    (cont.clientHeight - padPx*2) / Math.abs(p2.py - p1.py)
+  );
+  S.zoom = Math.max(0.1, Math.min(20, fitZ));
+  const cx = (p1.px + p2.px)/2, cy = (p1.py + p2.py)/2;
+  S.panX = cont.clientWidth/2  - cx * S.zoom;
+  S.panY = cont.clientHeight/2 - cy * S.zoom;
+  updateZoomStatus(); render();
+}
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const toggle = document.getElementById('sidebar-toggle');
+  sb.classList.toggle('collapsed');
+  const isCollapsed = sb.classList.contains('collapsed');
+  toggle.textContent = isCollapsed ? '▶' : '◂ Collapse';
+  toggle.title = isCollapsed ? 'Expand layers panel' : 'Collapse layers panel';
+}
+
+function toggleRightPanel() {
+  const rp = document.getElementById('right-panel');
+  rp.classList.toggle('collapsed');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MODAL HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+function openModal(id) {
+  document.getElementById(id).classList.remove('hidden');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+  if (id === 'modal-mission') { missionRouteItems = []; render(); }
+  if (id === 'modal-airspace') { S.tempAirspaceGeom = null; render(); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function refreshAll() {
+  updateAssetFilterList();
+  updateMissionCards();
+  updateStatusBar();
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MOCK / DEMO DATA
+// ═══════════════════════════════════════════════════════════════════════════
+function loadMockData() {
+  if (S.missions.length || S.datumPoints.length || S.airspaces.length) {
+    if (!confirm('This will replace all current data with demo data. Continue?')) return;
+  }
+
+  // ── Calibration (Singapore / Malay Peninsula area, ~800×600 image) ──────
+  S.calibPoints = [
+    { px: 100, py: 500, lat:  1.1667, lon: 103.5000 },  // SW corner
+    { px: 700, py: 100, lat:  3.5000, lon: 105.1667 },  // NE corner
+  ];
+  S.transform = computeTransform(S.calibPoints);
+
+  // ── Global Datum Points ──────────────────────────────────────────────────
+  S.datumPoints = [
+    { id: uid(), label: 'CP-1',        symbol: 'circle',   color: '#14BDEB', lat: 1.3521,  lon: 103.8198, visible: true },
+    { id: uid(), label: 'IP',          symbol: 'diamond',  color: '#f59e0b', lat: 2.0550,  lon: 103.4200, visible: true },
+    { id: uid(), label: 'RV ALPHA',    symbol: 'diamond',  color: '#f43f5e', lat: 2.7300,  lon: 104.2800, visible: true },
+    { id: uid(), label: 'EGRESS GATE', symbol: 'triangle', color: '#10b981', lat: 1.8800,  lon: 104.8500, visible: true },
+    { id: uid(), label: 'HOLD KILO',   symbol: 'square',   color: '#8b5cf6', lat: 3.1200,  lon: 103.9700, visible: true },
+  ];
+
+  // ── Airspaces ────────────────────────────────────────────────────────────
+  S.airspaces = [
+    {
+      id: uid(), type: 'airway', designator: 'A461',
+      lower: 'FL245', upper: 'FL460',
+      points: [
+        { lat: 1.3521, lon: 103.8198 },
+        { lat: 1.9000, lon: 103.6500 },
+        { lat: 2.5500, lon: 103.4200 },
+        { lat: 3.1000, lon: 103.2000 },
+      ],
+      visible: true,
+    },
+    {
+      id: uid(), type: 'danger', designator: 'D201',
+      lower: 'SFC', upper: 'FL100',
+      points: [
+        { lat: 2.2000, lon: 104.0000 },
+        { lat: 2.2000, lon: 104.4000 },
+        { lat: 2.5500, lon: 104.4000 },
+        { lat: 2.5500, lon: 104.0000 },
+      ],
+      visible: true,
+    },
+    {
+      id: uid(), type: 'restricted', designator: 'R102',
+      lower: 'SFC', upper: 'FL050',
+      points: [
+        { lat: 1.5500, lon: 104.5000 },
+        { lat: 1.5500, lon: 104.9000 },
+        { lat: 1.8000, lon: 104.9000 },
+        { lat: 1.8000, lon: 104.5000 },
+      ],
+      visible: true,
+    },
+    {
+      id: uid(), type: 'exercise', designator: 'EDA-301',
+      lower: 'FL050', upper: 'FL200',
+      points: [
+        { lat: 2.6000, lon: 103.7000 },
+        { lat: 2.6000, lon: 104.3500 },
+        { lat: 3.2000, lon: 104.3500 },
+        { lat: 3.2000, lon: 103.7000 },
+      ],
+      visible: true,
+    },
+  ];
+
+  // ── Missions ─────────────────────────────────────────────────────────────
+  const PALETTE = ['#14BDEB','#f59e0b','#10b981','#f43f5e','#8b5cf6'];
+  S.missions = [
+    {
+      id: uid(), callsign: 'FALCON 1', acftType: 'F-16C', acftCount: 2,
+      depICAO: 'WSSS', arrICAO: 'WMKK', etd: '0500H', eta: '0830H',
+      color: PALETTE[0],
+      waypoints: [
+        { id: uid(), lat: 1.3521,  lon: 103.8198, totEarly: '0500H', totLate: '0515H', label: 'WSSS' },
+        { id: uid(), lat: 1.7000,  lon: 103.7200, totEarly: '0530H', totLate: '0545H', label: 'CP-1' },
+        { id: uid(), lat: 2.0550,  lon: 103.4200, totEarly: '0600H', totLate: '0615H', label: 'IP' },
+        { id: uid(), lat: 2.7300,  lon: 104.2800, totEarly: '0700H', totLate: '0715H', label: 'TGT' },
+        { id: uid(), lat: 3.1200,  lon: 103.9700, totEarly: '0745H', totLate: '0800H', label: 'HOLD' },
+        { id: uid(), lat: 3.0700,  lon: 101.7000, totEarly: '0820H', totLate: '0830H', label: 'WMKK' },
+      ],
+      aoo: [
+        { lat: 2.5000, lon: 103.9000 },
+        { lat: 2.5000, lon: 104.6000 },
+        { lat: 3.0000, lon: 104.6000 },
+        { lat: 3.0000, lon: 103.9000 },
+      ],
+      datumPoints: [
+        { id: uid(), label: 'FAC',    lat: 2.7300, lon: 104.2800 },
+        { id: uid(), label: 'RESCUE', lat: 2.4500, lon: 104.0500 },
+      ],
+    },
+    {
+      id: uid(), callsign: 'EAGLE 2', acftType: 'F/A-18D', acftCount: 4,
+      depICAO: 'WMKK', arrICAO: 'WMKK', etd: '0545H', eta: '0900H',
+      color: PALETTE[1],
+      waypoints: [
+        { id: uid(), lat: 3.0700,  lon: 101.7000, totEarly: '0545H', totLate: '0600H', label: 'WMKK' },
+        { id: uid(), lat: 2.8500,  lon: 102.5000, totEarly: '0620H', totLate: '0635H', label: 'WP1' },
+        { id: uid(), lat: 2.8500,  lon: 103.7000, totEarly: '0650H', totLate: '0705H', label: 'FENCE IN' },
+        { id: uid(), lat: 2.9000,  lon: 104.2000, totEarly: '0720H', totLate: '0730H', label: 'TGT' },
+        { id: uid(), lat: 3.1200,  lon: 103.9700, totEarly: '0750H', totLate: '0800H', label: 'EGRESS' },
+        { id: uid(), lat: 3.0700,  lon: 101.7000, totEarly: '0845H', totLate: '0900H', label: 'WMKK' },
+      ],
+      aoo: [
+        { lat: 2.7000, lon: 103.8000 },
+        { lat: 2.7000, lon: 104.5000 },
+        { lat: 3.2000, lon: 104.5000 },
+        { lat: 3.2000, lon: 103.8000 },
+      ],
+      datumPoints: [
+        { id: uid(), label: 'STRIKE PT', lat: 2.9000, lon: 104.2000 },
+      ],
+    },
+    {
+      id: uid(), callsign: 'HAWK 3', acftType: 'C-130H', acftCount: 1,
+      depICAO: 'WSSS', arrICAO: 'WSSS', etd: '0600H', eta: '1000H',
+      color: PALETTE[2],
+      waypoints: [
+        { id: uid(), lat: 1.3521,  lon: 103.8198, totEarly: '0600H', totLate: '0615H', label: 'WSSS' },
+        { id: uid(), lat: 1.8800,  lon: 104.8500, totEarly: '0700H', totLate: '0715H', label: 'EGRESS GATE' },
+        { id: uid(), lat: 2.4000,  lon: 104.7500, totEarly: '0730H', totLate: '0750H', label: 'DZ ALPHA' },
+        { id: uid(), lat: 2.4000,  lon: 104.7500, totEarly: '0755H', totLate: '0815H', label: 'DZ BRAVO' },
+        { id: uid(), lat: 1.5000,  lon: 104.2000, totEarly: '0900H', totLate: '0915H', label: 'RTB WP' },
+        { id: uid(), lat: 1.3521,  lon: 103.8198, totEarly: '0945H', totLate: '1000H', label: 'WSSS' },
+      ],
+      aoo: [
+        { lat: 2.2000, lon: 104.5500 },
+        { lat: 2.2000, lon: 105.0500 },
+        { lat: 2.6500, lon: 105.0500 },
+        { lat: 2.6500, lon: 104.5500 },
+      ],
+      datumPoints: [],
+    },
+  ];
+
+  // All missions visible
+  S.visibleMissions = new Set(S.missions.map(m => m.id));
+
+  saveToStorage();
+  refreshAll();
+  updateStatusBar();
+
+  // Brief toast notification
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:#032B43;color:#FFFBFF;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.3)';
+  t.textContent = 'Demo data loaded — 3 missions, 5 datums, 4 airspaces';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MISSION INFO PANEL
+// ═══════════════════════════════════════════════════════════════════════════
+function pointInPolygon(px, py, pts) {
+  // pts is array of {lat,lon}; px,py are in image-pixel space
+  let inside = false;
+  const poly = pts.map(p => coordToImgPx(p.lon, p.lat)).filter(Boolean);
+  if (poly.length < 3) return false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].px, yi = poly[i].py;
+    const xj = poly[j].px, yj = poly[j].py;
+    if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+
+function findMissionHit(imgX, imgY) {
+  const threshold = 12 / S.zoom;
+  for (const m of S.missions) {
+    if (!S.visibleMissions.has(m.id)) continue;
+    const wpts = (m.waypoints||[]).filter(w => w.lat != null && w.lon != null);
+    // Waypoint dot hit
+    for (let wi = 0; wi < wpts.length; wi++) {
+      const p = coordToImgPx(wpts[wi].lon, wpts[wi].lat);
+      if (!p) continue;
+      if (Math.hypot(p.px - imgX, p.py - imgY) < threshold) return { mission: m, wpIdx: wi };
+    }
+    // Route line hit
+    for (let i = 1; i < wpts.length; i++) {
+      const a = coordToImgPx(wpts[i-1].lon, wpts[i-1].lat);
+      const b = coordToImgPx(wpts[i].lon, wpts[i].lat);
+      if (!a || !b) continue;
+      const d = pointToSegmentDist(imgX, imgY, a.px, a.py, b.px, b.py);
+      if (d < threshold) return { mission: m, wpIdx: i };
+    }
+    // Mission AOO area hit (inside polygon)
+    if (S.layers.aoo && m.aoo && m.aoo.length >= 3) {
+      if (pointInPolygon(imgX, imgY, m.aoo)) return { mission: m, wpIdx: -1 };
+    }
+    // AOWPT polygon hit
+    for (let wi = 0; wi < wpts.length; wi++) {
+      const wp = wpts[wi];
+      if (wp.isAO && wp.aoVertices && wp.aoVertices.length >= 3) {
+        if (pointInPolygon(imgX, imgY, convexHull(wp.aoVertices))) return { mission: m, wpIdx: wi };
+      }
+    }
+  }
+  return null;
+}
+
+function pointToSegmentDist(px, py, ax, ay, bx, by) {
+  const dx = bx-ax, dy = by-ay;
+  if (dx===0 && dy===0) return Math.hypot(px-ax, py-ay);
+  const t = Math.max(0, Math.min(1, ((px-ax)*dx + (py-ay)*dy) / (dx*dx+dy*dy)));
+  return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+}
+
+function findAirspaceHit(imgX, imgY) {
+  if (!S.transform) return null;
+  const threshold = 10 / S.zoom;
+  // Iterate in reverse draw order so top-drawn (exercise > dpr > airway) tested first
+  const order = ['exercise','danger','prohibited','restricted','airway'];
+  for (const typeName of order) {
+    for (const as of S.airspaces) {
+      if (as.visible === false) continue;
+      if (as.type !== typeName) continue;
+      if (!as.points || as.points.length < 2) continue;
+      // Polygon fill hit
+      if (as.points.length >= 3 && pointInPolygon(imgX, imgY, as.points)) return as;
+      // Polyline proximity hit (for airways and thin polygons)
+      for (let i = 1; i < as.points.length; i++) {
+        const a = coordToImgPx(as.points[i-1].lon, as.points[i-1].lat);
+        const b = coordToImgPx(as.points[i].lon, as.points[i].lat);
+        if (!a || !b) continue;
+        if (pointToSegmentDist(imgX, imgY, a.px, a.py, b.px, b.py) < threshold) return as;
+      }
+    }
+  }
+  return null;
+}
+
+function showMissionInfoPanel(m, activeWpIdx) {
+  document.getElementById('mip-color-bar').style.background = m.color;
+  document.getElementById('mip-callsign').textContent = m.callsign;
+  document.getElementById('mip-meta').textContent =
+    `${m.acftCount||1}× ${m.acftType||'—'}  ·  ${m.depICAO||'—'} → ${m.arrICAO||'—'}  ·  ${m.etd||'—'} – ${m.eta||'—'}`;
+
+  const body = document.getElementById('mip-body');
+  body.innerHTML = '';
+
+  // ETD row
+  if (m.etd) {
+    const r = document.createElement('div');
+    r.className = 'mip-row';
+    r.innerHTML = `<div class="mip-dot" style="color:${m.color}">▶</div><div class="mip-label">DEPARTURE · ${m.depICAO||''}</div><div class="mip-tot">${m.etd}</div>`;
+    body.appendChild(r);
+  }
+
+  // Waypoints
+  (m.waypoints||[]).forEach((wp, wi) => {
+    const r = document.createElement('div');
+    const isActive = activeWpIdx === wi;
+    r.className = 'mip-row' + (isActive ? ' active-leg' : '');
+    const tot = wp.totEarly && wp.totLate ? `${wp.totEarly} – ${wp.totLate}` : (wp.totEarly || wp.totLate || '');
+
+    if (wp.isAO) {
+      // AO waypoint — show polygon icon, label, TOT, vertex count
+      const vtxCount = (wp.aoVertices||[]).length;
+      const centCoord = (wp.lat != null && wp.lon != null) ? `${fmtLat(wp.lat)} ${fmtLon(wp.lon)}` : '';
+      r.innerHTML = `
+        <div class="mip-dot">
+          <svg width="14" height="14" viewBox="0 0 14 14">
+            <path d="M7 1.5 L12.5 7 L7 12.5 L1.5 7 Z" fill="${m.color}" stroke="white" stroke-width="1.2"/>
+          </svg>
+        </div>
+        <div style="flex:1">
+          <div class="mip-label">${wi+1}. ${wp.label||'AO '+(wi+1)} <span style="font-size:10px;font-weight:400;color:var(--text-3);margin-left:4px">▣ AO · ${vtxCount} vertices</span></div>
+          ${centCoord ? `<div class="mip-coord">centroid ${centCoord}</div>` : ''}
+        </div>
+        ${tot ? `<div class="mip-tot">${tot}</div>` : ''}`;
+    } else {
+      const coordStr = (wp.lat != null && wp.lon != null) ? `${fmtLat(wp.lat)} ${fmtLon(wp.lon)}` : '';
+      r.innerHTML = `
+        <div class="mip-dot" style="color:${m.color}">
+          <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="${m.color}" stroke="white" stroke-width="1.5"/></svg>
+        </div>
+        <div style="flex:1">
+          <div class="mip-label">${wi+1}. ${wp.label||'WPT '+(wi+1)}</div>
+          ${coordStr ? `<div class="mip-coord">${coordStr}</div>` : ''}
+        </div>
+        ${tot ? `<div class="mip-tot">${tot}</div>` : ''}`;
+    }
+
+    if (wp.lat != null && wp.lon != null) {
+      r.classList.add('clickable');
+      r.addEventListener('click', (ev) => {
+        if (ev.target.closest('button')) return;
+        highlightMapPoint(wp.lon, wp.lat);
+      });
+    }
+    body.appendChild(r);
+    if (isActive) setTimeout(() => r.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 60);
+  });
+
+  // Datum points
+  (m.datumPoints||[]).forEach(dp => {
+    if (!dp.label) return;
+    const r = document.createElement('div');
+    r.className = 'mip-row';
+    const coordStr = (dp.lat != null && dp.lon != null) ? `${fmtLat(dp.lat)} ${fmtLon(dp.lon)}` : '';
+    r.innerHTML = `
+      <div class="mip-dot" style="color:var(--amber)">◆</div>
+      <div style="flex:1">
+        <div class="mip-label">${dp.label}</div>
+        ${coordStr ? `<div class="mip-coord">${coordStr}</div>` : ''}
+      </div>`;
+    body.appendChild(r);
+  });
+
+  // ETA row
+  if (m.eta) {
+    const r = document.createElement('div');
+    r.className = 'mip-row';
+    r.innerHTML = `<div class="mip-dot" style="color:${m.color}">■</div><div class="mip-label">ARRIVAL · ${m.arrICAO||''}</div><div class="mip-tot">${m.eta}</div>`;
+    body.appendChild(r);
+  }
+
+  document.getElementById('mission-info-panel').classList.remove('hidden');
+}
+
+function closeMissionInfoPanel() {
+  document.getElementById('mission-info-panel').classList.add('hidden');
+}
+
+const AIP_COLORS = {
+  airway:     { bar: '#032B43', badge: 'airway'     },
+  danger:     { bar: '#dc2626', badge: 'danger'     },
+  prohibited: { bar: '#7c3aed', badge: 'prohibited' },
+  restricted: { bar: '#d97706', badge: 'restricted' },
+  exercise:   { bar: '#6d28d9', badge: 'exercise'   },
+};
+
+function showAssetInfoPanel(as) {
+  const asType = as.type;
+  const col = AIP_COLORS[asType] || AIP_COLORS.airway;
+  document.getElementById('aip-color-bar').style.background = col.bar;
+  document.getElementById('aip-designator').textContent = as.designator || '—';
+  const typeRow = document.getElementById('aip-type-row');
+  const typeLabel = { airway:'Airway', danger:'Danger Area', prohibited:'Prohibited Area', restricted:'Restricted Area', exercise:'Exercise Airspace' }[asType] || asType;
+  typeRow.innerHTML = `<span class="badge ${col.badge}">${typeLabel}</span>`;
+
+  const body = document.getElementById('aip-body');
+  body.innerHTML = '';
+
+  // Alt limits
+  if (as.lower || as.upper) {
+    const r = document.createElement('div');
+    r.className = 'aip-row';
+    r.innerHTML = `<div class="aip-row-label">Altitude</div><div class="aip-row-val">${as.upper||'—'} ↓ ${as.lower||'SFC'}</div>`;
+    body.appendChild(r);
+  }
+
+  // Boundaries
+  if (as.points && as.points.length > 0) {
+    const r = document.createElement('div');
+    r.className = 'aip-row';
+    const coordLines = as.points.map((p,i) => `<div>${i+1}. ${fmtLat(p.lat)}  ${fmtLon(p.lon)}</div>`).join('');
+    r.innerHTML = `<div class="aip-row-label">Boundary</div><div class="aip-row-val">${coordLines}</div>`;
+    body.appendChild(r);
+  }
+
+  document.getElementById('asset-info-panel').classList.add('visible');
+}
+
+function closeAssetInfoPanel() {
+  document.getElementById('asset-info-panel').classList.remove('visible');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CSV IMPORT
+// ═══════════════════════════════════════════════════════════════════════════
+function importMissionsCSV(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const lines = ev.target.result.split(/\r?\n/);
+      const missions = [];
+      let block = [];
+      const flushBlock = () => {
+        if (block.length === 0) return;
+        const headerLine = block[0];
+        const parts = headerLine.split(',');
+        if (parts.length < 1) { block = []; return; }
+        const callsign = parts[0]?.trim();
+        if (!callsign) { block = []; return; }
+        const m = {
+          id: uid(),
+          callsign,
+          acftType:  parts[1]?.trim() || '',
+          acftCount: parseInt(parts[2]?.trim()) || 1,
+          depICAO:   parts[3]?.trim().toUpperCase() || '',
+          etd:       parts[4]?.trim() || '',
+          arrICAO:   parts[5]?.trim().toUpperCase() || '',
+          eta:       parts[6]?.trim() || '',
+          color:     parts[7]?.trim() || '#14BDEB',
+          waypoints: [],
+          datumPoints: [],
+          aoo: null,
+        };
+        const aooVerts = [];
+        let pendingAowpt = null;
+
+        const flushAowpt = () => {
+          if (!pendingAowpt) return;
+          // Compute centroid of vertices so route line has a position
+          if (pendingAowpt.aoVertices.length > 0) {
+            pendingAowpt.lat = pendingAowpt.aoVertices.reduce((s,v)=>s+v.lat,0) / pendingAowpt.aoVertices.length;
+            pendingAowpt.lon = pendingAowpt.aoVertices.reduce((s,v)=>s+v.lon,0) / pendingAowpt.aoVertices.length;
+          }
+          m.waypoints.push(pendingAowpt);
+          pendingAowpt = null;
+        };
+
+        for (let i = 1; i < block.length; i++) {
+          const line = block[i].trim();
+          if (!line || line.startsWith('#')) continue;
+
+          if (line.startsWith('AOWPT:')) {
+            flushAowpt();
+            const p = line.slice(6).split(',');
+            pendingAowpt = { id: uid(), isAO: true, label: p[0]?.trim()||'', totEarly: p[1]?.trim()||'', totLate: p[2]?.trim()||'', lat: null, lon: null, aoVertices: [] };
+
+          } else if (line.startsWith('AOVTX:')) {
+            const vp = line.slice(6).split(',');
+            const lat = parseCompactDMS(vp[0]?.trim());
+            const lon = parseCompactDMS(vp[1]?.trim());
+            if (lat != null && lon != null && pendingAowpt) pendingAowpt.aoVertices.push({ lat, lon });
+
+          } else if (line.startsWith('DAT:')) {
+            flushAowpt();
+            const dp = line.slice(4).split(',');
+            const label = dp[0]?.trim() || '';
+            const lat = parseCompactDMS(dp[1]?.trim());
+            const lon = parseCompactDMS(dp[2]?.trim());
+            m.datumPoints.push({ id: uid(), label, lat: lat ?? null, lon: lon ?? null });
+
+          } else if (line.startsWith('AO:') || line.startsWith('AOO:')) {
+            flushAowpt();
+            const prefix = line.startsWith('AOO:') ? 4 : 3;
+            const vp = line.slice(prefix).split(',');
+            const lat = parseCompactDMS(vp[0]?.trim());
+            const lon = parseCompactDMS(vp[1]?.trim());
+            if (lat != null && lon != null) aooVerts.push({ lat, lon });
+
+          } else {
+            flushAowpt();
+            const wp = line.split(',');
+            const label = wp[0]?.trim() || '';
+            const lat = parseCompactDMS(wp[1]?.trim());
+            const lon = parseCompactDMS(wp[2]?.trim());
+            const totEarly = wp[3]?.trim() || '';
+            const totLate  = wp[4]?.trim() || '';
+            m.waypoints.push({ id: uid(), label, lat: lat ?? null, lon: lon ?? null, totEarly, totLate });
+          }
+        }
+        flushAowpt();
+        if (aooVerts.length >= 3) m.aoo = aooVerts;
+        missions.push(m);
+        block = [];
+      };
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (line.startsWith('#')) continue;          // comments never flush — skip silently
+        if (!line) { if (block.length > 0) flushBlock(); continue; }  // blank lines separate missions
+        block.push(line);
+      }
+      flushBlock();
+      if (missions.length === 0) { alert('No valid missions found in CSV.'); e.target.value = ''; return; }
+      missions.forEach(m => {
+        const existing = S.missions.findIndex(x => x.callsign === m.callsign);
+        if (existing >= 0) S.missions[existing] = m;
+        else S.missions.push(m);
+        S.visibleMissions.add(m.id);
+      });
+      saveToStorage(); refreshAll();
+      const t = document.createElement('div');
+      t.style.cssText = 'position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:#032B43;color:#FFFBFF;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.3)';
+      t.textContent = `CSV imported — ${missions.length} mission${missions.length!==1?'s':''} loaded`;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    } catch(err) { alert('CSV parse error: ' + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function downloadSampleCSV() {
+  const sample = `# SKYPLOT Mission Import Template
+# ─────────────────────────────────────────────────────────────────────────────
+# FORMAT RULES
+# • Lines starting with # are comments — ignored everywhere.
+# • Each mission is a BLOCK of consecutive data lines separated by a BLANK LINE.
+# • The FIRST line of each block is the MISSION HEADER (8 fields).
+# • Do NOT leave blank lines inside a block (between header and its waypoints).
+#
+# MISSION HEADER:   missionName,acftType,acftCount,depICAO,etd,arrICAO,eta,color
+# WAYPOINT:         label,lat,lon,totEarly,totLate   (totLate optional)
+# DATUM POINT:      DAT:label,lat,lon
+# AOO VERTEX:       AOO:lat,lon   (need 3+ for polygon)
+#
+# COORDINATES: lat=DDMMSSN/S  lon=DDDMMSSE/W  e.g. 013121N / 1034856E
+# COLOURS: #14BDEB #f59e0b #10b981 #f43f5e #8b5cf6 #fb923c #888888 #1a1a1a
+# ─────────────────────────────────────────────────────────────────────────────
+
+FALCON 1,F-16C,2,WSSS,0500H,WMKK,0900H,#14BDEB
+DEPARTURE,013121N,1034856E,0500H,0510H
+WAYPOINT 1,014500N,1034000E,0520H,0530H
+IP,020000N,1040000E,0600H,0615H
+TARGET,023000N,1043000E,0700H,0715H
+EGRESS,022000N,1045000E,0730H,
+ARRIVAL,030407N,1014200E,0850H,0900H
+DAT:IP,020000N,1040000E
+DAT:RESCUE,021200N,1041500E
+AOO:021500N,1041000E
+AOO:021500N,1045000E
+AOO:024500N,1045000E
+AOO:024500N,1041000E
+
+EAGLE 2,F/A-18D,4,WMKK,0545H,WMKK,1000H,#f59e0b
+DEPARTURE,030407N,1014200E,0545H,0600H
+FENCE IN,025000N,1035000E,0650H,0700H
+TARGET,025400N,1041200E,0720H,0730H
+EGRESS,030000N,1040000E,0750H,
+ARRIVAL,030407N,1014200E,0945H,1000H
+DAT:STRIKE PT,025400N,1041200E
+AOO:024200N,1038000E
+AOO:024200N,1044500E
+AOO:031200N,1044500E
+AOO:031200N,1038000E
+`;
+  const blob = new Blob([sample], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'skyplot-sample.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════════════
+function init() {
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  setupLayerToggles();
+  loadFromStorage();
+  refreshAll();
+}
+
+init();
+</script>
+</body>
+</html>
