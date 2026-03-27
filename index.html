@@ -244,7 +244,7 @@ body {
   flex: 1;
   position: relative;
   overflow: visible;
-  background: #1a2530;
+  background: #ffffff;
   cursor: crosshair;
 }
 #map-canvas {
@@ -1263,7 +1263,8 @@ body {
         </div>
       </div>
       <div class="calib-step">
-        <strong>Step 2</strong> — Click <em>Pick Point on Map</em>, then click a known location on the map. Enter the real-world DMS coordinates for each point. Minimum 2 points required.
+        <strong>Step 2</strong> — Click <em>Pick Point on Map</em>, then click a known location on the map. Enter the real-world DMS coordinates for each point. Minimum 2 points required.<br>
+        <span style="color:var(--text-3);font-size:11px">Tip: Latitude = N/S (rows), Longitude = E/W (columns). Points further <strong>right</strong> on the map must have <strong>higher longitude</strong>. Points further <strong>up</strong> must have <strong>higher latitude</strong>.</span>
       </div>
       <table id="calib-points-table">
         <thead>
@@ -1530,7 +1531,7 @@ body {
 const MISSION_COLORS = [
   '#14BDEB','#f59e0b','#10b981','#f43f5e',
   '#8b5cf6','#fb923c','#06b6d4','#84cc16',
-  '#888888','#1a1a1a'
+  '#e2e8f0','#94a3b8'
 ];
 
 const DPR_COLORS = {
@@ -1659,7 +1660,10 @@ function computeTransform(pts) {
     // Inverse: lon,lat -> px,py
     const inv = (lon, lat) => ({ px: (lon - offX)/scaleX, py: (lat - offY)/scaleY });
     const scaleM = Math.sqrt(scaleX*scaleX + scaleY*scaleY);
-    return { fwd, inv, scaleMetersPerPx: scaleM * 111320, scaleDegreesPerPx: scaleM };
+    // xOk: scaleX>0 means right→east (correct for N-up maps)
+    // yOk: scaleY<0 means down→south (correct for N-up maps, canvas Y is inverted)
+    return { fwd, inv, scaleMetersPerPx: scaleM * 111320, scaleDegreesPerPx: scaleM,
+             xOk: scaleX > 0, yOk: scaleY < 0 };
   }
   // Full affine for 3+ points (least squares)
   const n = pts.length;
@@ -1691,7 +1695,8 @@ function computeTransform(pts) {
     py: ic*(lon-c) + id2*(lat-f)
   });
   const scaleM = Math.sqrt(a*a + d*d);
-  return { fwd, inv, scaleMetersPerPx: scaleM * 111320, scaleDegreesPerPx: scaleM };
+  return { fwd, inv, scaleMetersPerPx: scaleM * 111320, scaleDegreesPerPx: scaleM,
+           xOk: a > 0, yOk: d < 0 };
 }
 
 function solve3x3(A, b) {
@@ -1979,9 +1984,13 @@ function drawAllAoo() {
   for (const m of S.missions) {
     if (!S.visibleMissions.has(m.id)) continue;
     if (!m.aoo || m.aoo.length < 3) continue;
+    const validPts = m.aoo.filter(p => p.lat != null && p.lon != null);
+    if (validPts.length < 3) continue;
+    const hull = convexHull(validPts);
+    if (hull.length < 3) continue;
     const alpha = m.id === S.selectedMission ? '0.35' : '0.20';
     const fill = hexToRgba(m.color, parseFloat(alpha));
-    drawPolygonFill(convexHull(m.aoo), { fill, stroke: m.color, width: 2, dash:[7,4] });
+    drawPolygonFill(hull, { fill, stroke: m.color, width: 2, dash:[7,4] });
   }
 }
 
@@ -2184,7 +2193,7 @@ let isPanning = false, panStart = { x:0, y:0 };
 canvas.addEventListener('mousedown', e => {
   if (e.button === 1 || (e.button === 0 && e.altKey)) {
     isPanning = true;
-    panStart = { x: e.clientX - S.panX, y: e.clientY - S.panY };
+    panStart = { x: e.offsetX - S.panX, y: e.offsetY - S.panY };
     canvas.style.cursor = 'grabbing';
     return;
   }
@@ -2193,14 +2202,13 @@ canvas.addEventListener('mousedown', e => {
 
 canvas.addEventListener('mousemove', e => {
   if (isPanning) {
-    S.panX = e.clientX - panStart.x;
-    S.panY = e.clientY - panStart.y;
+    S.panX = e.offsetX - panStart.x;
+    S.panY = e.offsetY - panStart.y;
     render();
     updateZoomStatus();
     return;
   }
-  const rect = canvas.getBoundingClientRect();
-  const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+  const cx = e.offsetX, cy = e.offsetY;
   const coord = canvasToCoord(cx, cy);
   const sb = document.getElementById('sb-coords');
   if (coord) {
@@ -2221,8 +2229,7 @@ canvas.addEventListener('mouseup', e => {
 
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+  const cx = e.offsetX, cy = e.offsetY;
   const factor = e.deltaY < 0 ? 1.12 : 0.89;
   const newZoom = Math.max(0.05, Math.min(20, S.zoom * factor));
   S.panX = cx - (cx - S.panX) * (newZoom / S.zoom);
@@ -2246,8 +2253,7 @@ document.addEventListener('keydown', e => {
 });
 
 function handleMapClick(e) {
-  const rect = canvas.getBoundingClientRect();
-  const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+  const cx = e.offsetX, cy = e.offsetY;
   const ip = canvasToimgPx(cx, cy);
   const coord = imgPxToCoord(ip.px, ip.py);
 
@@ -2411,6 +2417,7 @@ function fitImageToCanvas() {
 // ═══════════════════════════════════════════════════════════════════════════
 function openCalibrationModal() {
   renderCalibTable();
+  updateCalibScale();   // show axis warnings immediately if data is already bad
   openModal('modal-calib');
 }
 
@@ -2451,7 +2458,11 @@ function updateCalibScale() {
   const t = computeTransform(S.calibPoints);
   el.classList.remove('hidden');
   if (t) {
-    el.textContent = `Scale: ≈ ${t.scaleDegreesPerPx.toExponential(3)}°/px  (≈ ${Math.round(t.scaleMetersPerPx)}m/px)`;
+    const warnings = [];
+    if (!t.xOk) warnings.push('⚠ X-axis inverted — right side of map should have HIGHER longitude. Check coordinate entries or swap point order.');
+    if (!t.yOk) warnings.push('⚠ Y-axis inverted — bottom of map should have LOWER latitude. Check coordinate entries.');
+    el.innerHTML = `Scale: ≈ ${t.scaleDegreesPerPx.toExponential(3)}°/px  (≈ ${Math.round(t.scaleMetersPerPx)}m/px)`
+      + (warnings.length ? `<br><span style="color:#dc2626;font-weight:600">${warnings.join('<br>')}</span>` : '');
   } else {
     el.textContent = 'Cannot compute transform — check point values.';
   }
@@ -2484,8 +2495,12 @@ function clearCalibration() {
 
 function applyCalibration() {
   if (S.calibPoints.length < 2) { alert('Add at least 2 calibration points.'); return; }
-  S.transform = computeTransform(S.calibPoints);
-  if (!S.transform) { alert('Could not compute transform — ensure points are not collinear.'); return; }
+  const t = computeTransform(S.calibPoints);
+  if (!t) { alert('Could not compute transform — ensure points are not collinear.'); return; }
+  if (!t.xOk) {
+    if (!confirm('Warning: The X-axis appears inverted \u2014 coordinates decrease going right.\n\nThis usually means you entered the wrong longitude for one or both points (e.g. a western point was given an eastern longitude).\n\nApply anyway?')) return;
+  }
+  S.transform = t;
   updateStatusBar();
   saveToStorage();
   closeModal('modal-calib');
@@ -2497,8 +2512,13 @@ function updateStatusBar() {
   const cv = document.getElementById('sb-calib-val');
   if (S.transform) {
     sv.textContent = `≈ ${Math.round(S.transform.scaleMetersPerPx)}m/px`;
-    cv.textContent = '✓ calibrated';
-    cv.style.color = '#16a34a';
+    if (!S.transform.xOk) {
+      cv.textContent = '⚠ X-axis inverted — recalibrate';
+      cv.style.color = '#dc2626';
+    } else {
+      cv.textContent = '✓ calibrated';
+      cv.style.color = '#16a34a';
+    }
   } else {
     sv.textContent = 'uncalibrated';
     cv.textContent = '✕ none';
@@ -2516,7 +2536,7 @@ function openMissionModal(mission) {
   editingMissionId   = mission ? mission.id : null;
   missionRouteItems = [];
   if (mission) {
-    (mission.waypoints||[]).forEach(w => missionRouteItems.push({ id: uid(), type:'wpt', label: w.label||'', lat: w.lat, lon: w.lon, totEarly: w.totEarly||'', totLate: w.totLate||'' }));
+    (mission.waypoints||[]).forEach(w => missionRouteItems.push({ id: uid(), type:'wpt', label: w.label||'', lat: w.lat, lon: w.lon, totEarly: w.totEarly||'', totLate: w.totLate||'', isAO: w.isAO||false, aoVertices: w.aoVertices||null }));
     (mission.datumPoints||[]).forEach(d => missionRouteItems.push({ id: uid(), type:'dat', label: d.label||'', lat: d.lat, lon: d.lon, totEarly:'', totLate:'' }));
     (mission.aoo||[]).forEach(pt => missionRouteItems.push({ id: uid(), type:'aoo', label:'', lat: pt.lat, lon: pt.lon, totEarly:'', totLate:'' }));
   }
@@ -2769,7 +2789,7 @@ function saveMission() {
     etd:        document.getElementById('m-etd').value.trim(),
     eta:        document.getElementById('m-eta').value.trim(),
     color,
-    waypoints:    missionRouteItems.filter(x=>x.type==='wpt').map(x=>({ id:x.id, label:x.label, lat:x.lat, lon:x.lon, totEarly:x.totEarly, totLate:x.totLate })),
+    waypoints:    missionRouteItems.filter(x=>x.type==='wpt').map(x=>({ id:x.id, label:x.label, lat:x.lat, lon:x.lon, totEarly:x.totEarly, totLate:x.totLate, ...(x.isAO ? { isAO:true, aoVertices:x.aoVertices } : {}) })),
     datumPoints:  missionRouteItems.filter(x=>x.type==='dat').map(x=>({ id:x.id, label:x.label, lat:x.lat, lon:x.lon })),
     aoo:          missionRouteItems.some(x=>x.type==='aoo') ? missionRouteItems.filter(x=>x.type==='aoo').map(x=>({ lat:x.lat, lon:x.lon })) : null,
   };
@@ -4058,6 +4078,30 @@ AOO:031200N,1038000E
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  DEFAULT TRANSFORM (Singapore area, pre-calibration)
+// ═══════════════════════════════════════════════════════════════════════════
+function initDefaultTransform() {
+  if (S.transform) return; // user has calibrated — don't overwrite
+  const W = canvas.width  || 1000;
+  const H = canvas.height || 700;
+  // Center: 1°17′N  103°50′E,  scale 2.118e-3 °/px
+  const cLon = 103 + 50 / 60;   // 103.8333…°E
+  const cLat = 1   + 17 / 60;   // 1.2833…°N
+  const sc   = 2.118e-3;         // degrees per pixel
+  // image-pixel (0,0) = centre coordinate; pan offsets canvas-centre onto it
+  S.transform = {
+    fwd: (px, py) => ({ lon: cLon + px * sc,   lat: cLat - py * sc }),
+    inv: (lon, lat) => ({ px: (lon - cLon) / sc, py: (cLat - lat) / sc }),
+    scaleMetersPerPx:  sc * 111320,
+    scaleDegreesPerPx: sc,
+    xOk: true,
+    yOk: true,
+  };
+  S.panX = W / 2;
+  S.panY = H / 2;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════════════════
 function init() {
@@ -4065,6 +4109,7 @@ function init() {
   window.addEventListener('resize', resizeCanvas);
   setupLayerToggles();
   loadFromStorage();
+  initDefaultTransform();
   refreshAll();
 }
 
