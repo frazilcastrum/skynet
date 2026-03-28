@@ -382,6 +382,19 @@ html, body {
   transition: border-color .12s, color .12s, background .12s;
 }
 .wdb-add-toggle:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(20,189,235,.06); }
+.wdb-io-section {
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(20,189,235,.08);
+  display: flex; gap: 6px; flex-shrink: 0;
+}
+.wdb-io-btn {
+  flex: 1; height: 28px; border-radius: 6px;
+  border: 1px solid rgba(20,189,235,.2);
+  background: transparent; color: rgba(20,189,235,.7);
+  font-size: 11px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: border-color .12s, color .12s, background .12s;
+}
+.wdb-io-btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(20,189,235,.06); }
 .wdb-add-form {
   margin-top: 8px;
   display: flex;
@@ -683,6 +696,12 @@ html, body {
       <div id="wdb-add-err" class="wdb-add-err" style="display:none"></div>
       <button class="wdb-add-submit" onclick="submitAddWaypoint()">Add to Database</button>
     </div>
+  </div>
+
+  <div class="wdb-io-section">
+    <button class="wdb-io-btn" onclick="exportWaypointDB()">↓ Export Waypoint DB</button>
+    <button class="wdb-io-btn" onclick="document.getElementById('wdb-import-input').click()">↑ Import Waypoint DB</button>
+    <input type="file" id="wdb-import-input" accept=".json" style="display:none" onchange="importWaypointDB(event)">
   </div>
 
   <div class="wdb-list-wrap" id="wdb-list"></div>
@@ -1214,6 +1233,41 @@ function submitAddWaypoint() {
   clearWDBForm();
   toggleWDBForm();
   renderWDB();
+}
+
+function exportWaypointDB() {
+  const data = JSON.stringify(customWaypoints, null, 2);
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
+  a.download = 'waypoint-db.json';
+  a.click();
+}
+
+function importWaypointDB(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!Array.isArray(imported)) throw new Error('Expected an array');
+      const merged = [...customWaypoints];
+      let added = 0;
+      imported.forEach(wp => {
+        if (!wp.code) return;
+        const exists = merged.some(w => w.code === wp.code);
+        if (!exists) { merged.push({ ...wp, custom: true }); added++; }
+      });
+      customWaypoints = merged;
+      saveCustom();
+      renderWDB();
+      alert(`Imported ${added} new waypoint${added !== 1 ? 's' : ''} (duplicates skipped).`);
+    } catch(err) {
+      alert('Import failed: ' + err.message);
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 function deleteCustomWaypoint(code) {
