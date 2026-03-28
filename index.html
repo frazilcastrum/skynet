@@ -822,6 +822,39 @@ body {
   gap: 2px;
   flex-wrap: nowrap;
 }
+.ao-vertices-section {
+  margin-top: 5px;
+  padding: 6px 8px 4px;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border);
+}
+.ao-vertices-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  margin-bottom: 5px;
+}
+.ao-vertex-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.ao-vertex-num {
+  width: 16px;
+  font-size: 9px;
+  color: var(--text-3);
+  font-family: 'IBM Plex Mono','Consolas',monospace;
+  text-align: right;
+  flex-shrink: 0;
+}
+.ao-vtx-warn { font-size: 10px; color: var(--amber); margin-top: 3px; }
 .vx-axis-label {
   font-size: 9px;
   font-weight: 700;
@@ -1494,7 +1527,7 @@ body {
         <div class="section-actions" style="display:flex;gap:4px">
           <button class="btn-xs" onclick="addRouteItem('wpt','assets')">+ From Assets</button>
           <button class="btn-xs" onclick="addRouteItem('wpt','manual')">+ New Point</button>
-          <button class="btn-xs" onclick="addRouteItem('aoo','manual')">+ New AO Vertex</button>
+          <button class="btn-xs" onclick="addRouteItem('ao','manual')">+ AO</button>
         </div>
       </div>
       <div id="route-list"></div>
@@ -1953,12 +1986,20 @@ function dmsPartsToDD(d, m, s, hemi) {
 // ── Compact DMS format: '012048N' / '1042424E' ────────────────────────────
 function parseCompactDMS(str) {
   if (!str) return null;
-  str = str.trim().toUpperCase().replace(/\s/g,'');
-  const hemi = str.slice(-1);
-  if (!['N','S','E','W'].includes(hemi)) return null;
-  const num = str.slice(0,-1);
+  str = str.trim().replace(/\s/g,'').toUpperCase();
+  if (!str) return null;
+  const hemi = ['N','S','E','W'].includes(str.slice(-1)) ? str.slice(-1) : null;
+  const num  = hemi ? str.slice(0,-1) : str;
+  // Decimal degrees: "1.3521" or "103.8198"
+  if (/^[0-9]+\.[0-9]+$/.test(num)) {
+    const dec = parseFloat(num);
+    if (isNaN(dec)) return null;
+    return (hemi === 'S' || hemi === 'W') ? -dec : dec;
+  }
+  // DMS compact — infer lat vs lon from digit count when no hemisphere given
   let d, m, s;
-  if (hemi === 'N' || hemi === 'S') {
+  const isLat = hemi === 'N' || hemi === 'S' || (!hemi && num.replace(/[^0-9]/g,'').length <= 6);
+  if (isLat) {
     if (num.length < 4) return null;
     d = parseInt(num.slice(0,2),10);
     m = parseInt(num.slice(2,4),10);
@@ -1971,7 +2012,7 @@ function parseCompactDMS(str) {
   }
   if (isNaN(d)||isNaN(m)||isNaN(s)||m>=60||s>=60) return null;
   const dd = d + m/60 + s/3600;
-  return (hemi==='S'||hemi==='W') ? -dd : dd;
+  return (hemi === 'S' || hemi === 'W') ? -dd : dd;
 }
 
 function fmtLat(dd) {
@@ -3177,7 +3218,11 @@ function getSelectedMissionColor() {
 // ── Unified Route Items ────────────────────────────────────────────────────
 function addRouteItem(type, mode) {
   if (mode === 'assets') { openPickerForWaypoint(); return; }
-  missionRouteItems.push({ id: uid(), type, label: '', lat: null, lon: null, totEarly: '', totLate: '' });
+  if (type === 'ao') {
+    missionRouteItems.push({ id: uid(), type: 'wpt', isAO: true, label: '', lat: null, lon: null, aoVertices: [], totEarly: '', totLate: '' });
+  } else {
+    missionRouteItems.push({ id: uid(), type, label: '', lat: null, lon: null, totEarly: '', totLate: '' });
+  }
   renderRouteList();
 }
 
@@ -3242,6 +3287,44 @@ function clearAooItems() {
   render();
 }
 
+function addAOVertex(itemId) {
+  const item = missionRouteItems.find(x => x.id === itemId);
+  if (!item || !item.isAO) return;
+  if (!item.aoVertices) item.aoVertices = [];
+  item.aoVertices.push({ lat: null, lon: null });
+  renderRouteList();
+}
+
+function removeAOVertex(itemId, vtxIdx) {
+  const item = missionRouteItems.find(x => x.id === itemId);
+  if (!item || !item.aoVertices) return;
+  item.aoVertices.splice(vtxIdx, 1);
+  const valid = item.aoVertices.filter(v => v.lat != null && v.lon != null);
+  if (valid.length > 0) {
+    item.lat = valid.reduce((s,v) => s + v.lat, 0) / valid.length;
+    item.lon = valid.reduce((s,v) => s + v.lon, 0) / valid.length;
+  } else { item.lat = null; item.lon = null; }
+  renderRouteList();
+  render();
+}
+
+function updateAOVertex(itemId, vtxIdx, row) {
+  const item = missionRouteItems.find(x => x.id === itemId);
+  if (!item || !item.aoVertices) return;
+  const inputs = row.querySelectorAll('input.input');
+  const lat = parseCompactDMS(inputs[0]?.value);
+  const lon = parseCompactDMS(inputs[1]?.value);
+  if (!item.aoVertices[vtxIdx]) return;
+  if (lat != null) item.aoVertices[vtxIdx].lat = lat;
+  if (lon != null) item.aoVertices[vtxIdx].lon = lon;
+  const valid = item.aoVertices.filter(v => v.lat != null && v.lon != null);
+  if (valid.length > 0) {
+    item.lat = valid.reduce((s,v) => s + v.lat, 0) / valid.length;
+    item.lon = valid.reduce((s,v) => s + v.lon, 0) / valid.length;
+  }
+  render();
+}
+
 function renderRouteList() {
   const list = document.getElementById('route-list');
   if (!list) return;
@@ -3269,7 +3352,11 @@ function renderRouteList() {
     row.dataset.rid = item.id;
 
     let badge, badgeStyle, typeLabel;
-    if (item.type === 'wpt') {
+    if (item.type === 'wpt' && item.isAO) {
+      badge = '▣';
+      badgeStyle = 'background:#10b981;color:#fff';
+      typeLabel = 'AO';
+    } else if (item.type === 'wpt') {
       wptIdx++;
       badge = wptIdx;
       badgeStyle = 'background:var(--accent);color:#032B43';
@@ -3315,6 +3402,38 @@ function renderRouteList() {
         <button class="wp-pick-btn" onclick="pickRouteItemOnMap('${item.id}')" title="Pick on map">📍</button>
       </div>
       ${timeRow}`;
+
+    // AO items get a nested vertices section
+    if (item.type === 'wpt' && item.isAO) {
+      const aoVtx = item.aoVertices || [];
+      const vtxSec = document.createElement('div');
+      vtxSec.className = 'ao-vertices-section';
+      vtxSec.innerHTML = `
+        <div class="ao-vertices-header">
+          Vertices${aoVtx.length ? ` (${aoVtx.length})` : ''}
+          <button class="btn-xs" onclick="addAOVertex('${item.id}')">+ Vertex</button>
+        </div>
+        ${aoVtx.length === 0 ? '<div style="font-size:11px;color:var(--text-4);font-style:italic;padding:2px 0 4px">No vertices — add at least 3</div>' : ''}
+      `;
+      aoVtx.forEach((v, vi) => {
+        const vrow = document.createElement('div');
+        vrow.className = 'ao-vertex-row';
+        vrow.innerHTML = `
+          <span class="ao-vertex-num">${vi + 1}.</span>
+          <input class="input mono" style="flex:1;min-width:0;font-size:11px;height:26px;padding:0 6px" placeholder="012048N"  value="${v.lat != null ? fmtLat(v.lat) : ''}" oninput="updateAOVertex('${item.id}',${vi},this.closest('.ao-vertex-row'))">
+          <input class="input mono" style="flex:1;min-width:0;font-size:11px;height:26px;padding:0 6px" placeholder="1042424E" value="${v.lon != null ? fmtLon(v.lon) : ''}" oninput="updateAOVertex('${item.id}',${vi},this.closest('.ao-vertex-row'))">
+          <button class="wp-del" style="flex-shrink:0" onclick="removeAOVertex('${item.id}',${vi})">✕</button>`;
+        vtxSec.appendChild(vrow);
+      });
+      if (aoVtx.length > 0 && aoVtx.length < 3) {
+        const warn = document.createElement('div');
+        warn.className = 'ao-vtx-warn';
+        warn.textContent = '⚠ At least 3 vertices required';
+        vtxSec.appendChild(warn);
+      }
+      row.appendChild(vtxSec);
+    }
+
     list.appendChild(row);
   });
 }
