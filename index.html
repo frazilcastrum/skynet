@@ -238,6 +238,32 @@ body {
 }
 .layer-label { font-size: 12px; color: var(--text-1); flex: 1; }
 .layer-row.dimmed .layer-label { color: var(--text-3); }
+.layer-expand {
+  font-size: 12px; color: var(--text-3); padding: 2px 5px;
+  flex-shrink: 0; line-height: 1; transition: color .12s, background .12s;
+  border-radius: var(--radius-sm); margin-left: 2px; min-width: 22px; text-align: center;
+}
+.layer-row:hover .layer-expand { color: var(--text-1); background: rgba(0,0,0,0.06); }
+.layer-sub { display: none; padding: 2px 0 4px 22px; }
+.layer-sub-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 6px 2px 2px; border-radius: var(--radius-sm);
+  cursor: pointer; user-select: none; font-size: 11.5px; color: var(--text-2);
+}
+.layer-sub-item:hover { background: var(--bg-hover); }
+.sub-checkbox {
+  width: 11px; height: 11px; border-radius: 2px; flex-shrink: 0;
+  border: 1.5px solid var(--border-active); background: var(--bg-input);
+  display: flex; align-items: center; justify-content: center;
+}
+.layer-sub-item.checked .sub-checkbox {
+  background: var(--accent); border-color: var(--accent);
+}
+.layer-sub-item.checked .sub-checkbox::after {
+  content: ''; width: 6px; height: 4px;
+  border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
+  transform: rotate(-45deg) translate(1px,-1px); display: block;
+}
 
 /* ── Canvas Container ─────────────────────────────────────────────────────── */
 #canvas-container {
@@ -440,6 +466,111 @@ body {
   gap: 5px;
 }
 #mission-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Presentation Mode ────────────────────────────────────────────────────── */
+#pres-mode-bar {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px 0;
+  flex-shrink: 0;
+}
+#pres-toggle-btn {
+  flex: 1;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  letter-spacing: 0.03em;
+}
+#pres-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+#pres-toggle-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+/* Slide-up panel anchored to canvas-container bottom center */
+#presentation-panel {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  width: min(500px, 90%);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -6px 32px rgba(0,0,0,0.22);
+  z-index: 50;
+  transition: transform .38s cubic-bezier(.22,.68,0,1.15);
+  overflow: hidden;
+  max-height: 55vh;
+  display: flex;
+  flex-direction: column;
+}
+#presentation-panel.visible { transform: translateX(-50%) translateY(0); }
+#pres-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 18px 14px;
+  gap: 13px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#pres-color-strip {
+  width: 5px;
+  height: 54px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+#pres-title-block { flex: 1; min-width: 0; }
+#pres-callsign { font-size: 23px; font-weight: 700; color: var(--text-1); line-height: 1.2; }
+#pres-sub { font-size: 15px; color: var(--text-3); margin-top: 4px; }
+#pres-close-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .12s, color .12s;
+}
+#pres-close-btn:hover { background: var(--bg-hover); color: var(--text-1); }
+#pres-body { padding: 14px 18px 18px; overflow-y: auto; flex: 1; }
+.pres-section-title {
+  font-size: 14px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--text-3); text-transform: uppercase; margin: 0 0 9px;
+}
+.pres-wpt-list { list-style: none; padding: 0; margin: 0; }
+.pres-wpt-row {
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 16px;
+}
+.pres-wpt-row:last-child { border-bottom: none; }
+.pres-wpt-num {
+  width: 27px; height: 27px; border-radius: 50%;
+  background: var(--accent-light); color: var(--accent);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 2px;
+}
+.pres-wpt-info { flex: 1; min-width: 0; }
+.pres-wpt-coords { color: var(--text-3); font-family: 'IBM Plex Mono','Consolas',monospace; font-size: 11px; }
+.pres-wpt-label { font-size: 15px; color: var(--text-2); margin-top: 0; margin-bottom: 2px; }
+.pres-wpt-tot { color: var(--accent); font-size: 15px; font-weight: 600; white-space: nowrap; margin-top: 2px; }
+.mission-card.pres-focused { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); }
 
 /* ── Status Bar ───────────────────────────────────────────────────────────── */
 #statusbar {
@@ -1094,9 +1225,7 @@ body {
   </div>
   <div class="header-sep"></div>
   <div class="btn-group">
-    <button class="btn-header btn-sm" onclick="loadMockData()" title="Populate with demo missions and airspace">Demo</button>
-    <button class="btn-header btn-sm" onclick="document.getElementById('csv-import-input').click()" title="Import missions from CSV file">↑ CSV</button>
-    <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="importMissionsCSV(event)">
+    <button class="btn-header btn-sm" onclick="openMissionModal()">+ Mission</button>
   </div>
   <span class="btn-sep"></span>
   <div class="btn-group">
@@ -1105,7 +1234,8 @@ body {
     <button class="btn-header" onclick="openCalibrationModal()">◎ Calibrate</button>
   </div>
   <span class="btn-sep"></span>
-  <button class="btn-header accent" onclick="openMissionModal()">+ Mission</button>
+  <button class="btn-header accent" onclick="document.getElementById('csv-import-input').click()">+ Load Mission</button>
+  <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="importMissionsCSV(event)">
   <span class="btn-sep"></span>
   <div class="btn-group">
     <button class="btn-header btn-sm" id="export-btn" onclick="exportJSON()">↓ JSON</button>
@@ -1122,30 +1252,36 @@ body {
     <div id="sidebar-inner">
       <div class="panel-section">
         <div class="panel-section-title">Layers</div>
+        <label class="layer-row checked" id="lr-tiles">
+          <span class="layer-checkbox"></span>
+          <span class="layer-dot" style="background:#7ec8e3;border:1px solid #0ea5e9"></span>
+          <span class="layer-label">Base Map</span>
+        </label>
+        <label class="layer-row checked" id="lr-scsda">
+          <span class="layer-checkbox"></span>
+          <span class="layer-dot" style="background:rgba(220,38,38,0.5);border:1.5px dashed #B91C1C;box-sizing:border-box"></span>
+          <span class="layer-label">SCSDA</span>
+          <span class="layer-expand" id="lx-scsda" onclick="event.stopPropagation();toggleLayerExpand('scsda')">▸</span>
+        </label>
+        <div class="layer-sub" id="ls-scsda"></div>
+        <label class="layer-row checked" id="lr-xbs">
+          <span class="layer-checkbox"></span>
+          <span class="layer-dot" style="background:#007FB5;border:2px dashed #007FB5;box-sizing:border-box"></span>
+          <span class="layer-label">BS26 Airspace</span>
+          <span class="layer-expand" id="lx-xbs" onclick="event.stopPropagation();toggleLayerExpand('xbs')">▸</span>
+        </label>
+        <div class="layer-sub" id="ls-xbs"></div>
         <label class="layer-row checked" id="lr-airways">
           <span class="layer-checkbox"></span>
           <span class="layer-dot" style="background:#032B43;border:1px solid #aaa"></span>
           <span class="layer-label">Airways</span>
+          <span class="layer-expand" id="lx-airways" onclick="event.stopPropagation();toggleLayerExpand('airways')">▸</span>
         </label>
-        <label class="layer-row checked" id="lr-dpr">
-          <span class="layer-checkbox"></span>
-          <span class="layer-dot" style="background:#dc2626"></span>
-          <span class="layer-label">D / P / R Areas</span>
-        </label>
-        <label class="layer-row checked" id="lr-exercise">
-          <span class="layer-checkbox"></span>
-          <span class="layer-dot" style="background:#7c3aed"></span>
-          <span class="layer-label">Exercise Airspace</span>
-        </label>
+        <div class="layer-sub" id="ls-airways"></div>
         <label class="layer-row checked" id="lr-routes">
           <span class="layer-checkbox"></span>
           <span class="layer-dot" style="background:#14BDEB"></span>
-          <span class="layer-label">Routes</span>
-        </label>
-        <label class="layer-row checked" id="lr-aoo">
-          <span class="layer-checkbox"></span>
-          <span class="layer-dot" style="background:#14BDEB;opacity:.5"></span>
-          <span class="layer-label">Area of Ops</span>
+          <span class="layer-label">Missions</span>
         </label>
         <label class="layer-row checked" id="lr-datums">
           <span class="layer-checkbox"></span>
@@ -1186,6 +1322,19 @@ body {
       <div id="mip-body"></div>
     </div>
 
+    <!-- Presentation Mode slide-up panel -->
+    <div id="presentation-panel">
+      <div id="pres-header">
+        <div id="pres-color-strip"></div>
+        <div id="pres-title-block">
+          <div id="pres-callsign"></div>
+          <div id="pres-sub"></div>
+        </div>
+        <button id="pres-close-btn" onclick="closePresentationFocus()">✕</button>
+      </div>
+      <div id="pres-body"></div>
+    </div>
+
     <div id="asset-info-panel">
       <div id="aip-header">
         <div id="aip-color-bar"></div>
@@ -1210,6 +1359,9 @@ body {
     </div>
     <!-- Missions tab -->
     <div id="rp-missions">
+      <div id="pres-mode-bar">
+        <button id="pres-toggle-btn" onclick="togglePresentationMode()" title="Presentation Mode — click a mission card to isolate and zoom to it">⬟ Presentation Mode</button>
+      </div>
       <div id="mission-list"></div>
       <button id="mission-add-btn" onclick="openMissionModal()">＋ Add Mission</button>
     </div>
@@ -1263,7 +1415,7 @@ body {
         </div>
       </div>
       <div class="calib-step">
-        <strong>Step 2</strong> — Click <em>Pick Point on Map</em>, then click a known location on the map. Enter the real-world DMS coordinates for each point. Minimum 2 points required.<br>
+        <strong>Step 2</strong> — Click <em>Pick Point on Map</em>, then click a known location on the map. Enter the real-world DMS coordinates for each point. <span id="calib-min-pts-note">Minimum 2 points required.</span><br>
         <span style="color:var(--text-3);font-size:11px">Tip: Latitude = N/S (rows), Longitude = E/W (columns). Points further <strong>right</strong> on the map must have <strong>higher longitude</strong>. Points further <strong>up</strong> must have <strong>higher latitude</strong>.</span>
       </div>
       <table id="calib-points-table">
@@ -1284,6 +1436,7 @@ body {
     <div class="modal-footer">
       <button class="btn danger" onclick="clearCalibration()">Clear All</button>
       <div class="spacer"></div>
+      <button class="btn" id="btn-save-default" onclick="handleSaveDefault()" title="Save current map + calibration as startup default">💾 Save as Default</button>
       <button class="btn" onclick="closeModal('modal-calib')">Cancel</button>
       <button class="btn primary" onclick="applyCalibration()">Apply & Close</button>
     </div>
@@ -1371,10 +1524,7 @@ body {
         <label class="field-label">Type</label>
         <div class="type-selector" id="airspace-type-selector">
           <button class="type-btn selected" data-type="airway" onclick="selectAirspaceType('airway')">Airway</button>
-          <button class="type-btn" data-type="danger" onclick="selectAirspaceType('danger')">Danger (D)</button>
-          <button class="type-btn" data-type="prohibited" onclick="selectAirspaceType('prohibited')">Prohibited (P)</button>
-          <button class="type-btn" data-type="restricted" onclick="selectAirspaceType('restricted')">Restricted (R)</button>
-          <button class="type-btn" data-type="exercise" onclick="selectAirspaceType('exercise')">Exercise</button>
+          <button class="type-btn" data-type="area" onclick="selectAirspaceType('area')">Area</button>
         </div>
       </div>
       <div class="field-row">
@@ -1399,9 +1549,7 @@ body {
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn" onclick="startAirspaceDraw()">◻ Draw on Map</button>
         <button class="btn" onclick="openPickerForAirspace()">◆ Use Datum Points</button>
-        <button class="btn" onclick="document.getElementById('as-import-file').click()">↑ Import GeoJSON/KML</button>
         <button class="btn danger" onclick="clearAirspaceGeom()">Clear All</button>
-        <input type="file" id="as-import-file" accept=".json,.geojson,.kml" class="hidden" onchange="importAirspaceGeom(event)">
       </div>
       <div id="as-vertex-list" style="display:flex;flex-direction:column;gap:4px;"></div>
     </div>
@@ -1502,11 +1650,6 @@ body {
       <button class="modal-close" onclick="closeModal('modal-picker')">✕</button>
     </div>
     <div class="modal-body" style="gap:8px">
-      <div style="display:flex;gap:6px;flex-wrap:wrap" id="picker-type-filter">
-        <button class="type-btn selected" data-pf="all"      onclick="switchPickerFilter('all')">All</button>
-        <button class="type-btn"          data-pf="datums"   onclick="switchPickerFilter('datums')">Datum Points</button>
-        <button class="type-btn"          data-pf="exercise" onclick="switchPickerFilter('exercise')">Exercise Airspace</button>
-      </div>
       <input class="input" id="picker-search" placeholder="Search…" oninput="renderPickerList()" style="height:28px;font-size:12px">
       <div id="picker-list" style="display:flex;flex-direction:column;gap:5px;max-height:340px;overflow-y:auto"></div>
       <!-- Multi-select tray for airspace geometry mode -->
@@ -1531,7 +1674,7 @@ body {
 const MISSION_COLORS = [
   '#14BDEB','#f59e0b','#10b981','#f43f5e',
   '#8b5cf6','#fb923c','#06b6d4','#84cc16',
-  '#e2e8f0','#94a3b8'
+  '#1a1a1a','#94a3b8'
 ];
 
 const DPR_COLORS = {
@@ -1541,6 +1684,207 @@ const DPR_COLORS = {
   exercise:   { fill: 'rgba(109,40,217,0.15)',  stroke: '#6d28d9' },
   airway:     { fill: 'rgba(0,0,0,0)',          stroke: '#032B43' }
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BERSAMA SHIELD 2026 — PRE-DEFINED EXERCISE AIRSPACE AREAS
+//  Coordinates extracted from AIP SUP 057/2026, Section 2.2
+//  Curved sections (CTR arcs, coastline) approximated as straight segments
+// ═══════════════════════════════════════════════════════════════════════════
+const XBS_AREAS = [
+  {
+    id: 'area-a', label: 'AREA A', altLabel: '5,000–12,000 FT',
+    color: { fill: 'rgba(0,160,220,0.15)', stroke: '#007FB5' },
+    points: [
+      {lat:2.49083,lon:102.94528},{lat:2.80056,lon:102.67194},
+      {lat:3.01528,lon:102.48139},{lat:3.16222,lon:102.35056},
+      {lat:3.67333,lon:101.89667},{lat:3.93889,lon:101.66111},
+      {lat:4.32761,lon:101.47356},
+      // Ipoh CTR boundary approx
+      {lat:5.00131,lon:100.96800},{lat:5.00081,lon:100.86128},
+      {lat:5.12186,lon:100.06581},
+      // Butterworth CTR approx
+      {lat:5.70719,lon:100.49086},{lat:5.44081,lon:101.06161},
+      {lat:5.76703,lon:101.77581},
+      // Kota Bharu TMA then east coast approx
+      {lat:5.65925,lon:102.75186},{lat:2.84731,lon:103.46389},
+    ]
+  },
+  {
+    id: 'area-b', label: 'AREA B', altLabel: 'SFC–FL460',
+    color: { fill: 'rgba(120,40,200,0.12)', stroke: '#7828C8' },
+    points: [
+      {lat:6.50000,lon:102.50000},{lat:6.50000,lon:107.50000},
+      {lat:5.00000,lon:107.50000},{lat:4.00000,lon:106.50000},
+      {lat:3.18333,lon:105.33333},{lat:2.81278,lon:105.19056},
+      {lat:2.73000,lon:105.14833},{lat:2.63167,lon:105.20722},
+      {lat:2.26667,lon:105.33333},{lat:1.50000,lon:104.86667},
+      {lat:1.50000,lon:104.60000},{lat:1.50000,lon:104.33333},
+      {lat:2.00000,lon:104.33333},{lat:2.00000,lon:104.28333},
+      {lat:2.36278,lon:104.28333},
+      // 59 DME VTK arc approx
+      {lat:2.38750,lon:103.87758},
+      // East coast approx
+      {lat:5.54436,lon:102.90231},{lat:5.65925,lon:102.75186},
+      // Kota Bharu TMA approx
+      {lat:6.46944,lon:102.45000},
+    ]
+  },
+  {
+    id: 'area-d', label: 'AREA D', altLabel: 'SFC–FL190',
+    color: { fill: 'rgba(234,88,12,0.15)', stroke: '#C2590A' },
+    points: [
+      {lat:2.36278,lon:104.28333},{lat:2.00000,lon:104.28333},
+      {lat:2.00000,lon:104.33333},{lat:1.50000,lon:104.33333},
+      {lat:1.50000,lon:104.60000},{lat:1.46889,lon:104.60250},
+      {lat:1.48917,lon:104.57806},{lat:1.30000,lon:104.50000},
+      {lat:1.26194,lon:104.11833},{lat:1.27614,lon:104.11842},
+      {lat:1.27333,lon:104.04667},{lat:1.27300,lon:104.03794},
+      {lat:1.26947,lon:104.03347},{lat:1.21667,lon:103.90333},
+      {lat:1.21667,lon:103.88333},{lat:1.22258,lon:103.85422},
+      {lat:1.18861,lon:103.66194},{lat:1.20000,lon:103.65000},
+      {lat:1.23167,lon:103.54250},{lat:1.41036,lon:103.65889},
+      {lat:1.55083,lon:103.86778},{lat:2.36764,lon:103.77886},
+      // 59 DME VTK arc back to start
+    ]
+  },
+  {
+    id: 'lfa', label: 'LFA', altLabel: '250–5,000 FT',
+    color: { fill: 'rgba(22,163,74,0.14)', stroke: '#15803D' },
+    points: [
+      {lat:2.49083,lon:102.94528},{lat:2.84731,lon:103.46389},
+      // East coast approx
+      {lat:5.54436,lon:102.90231},
+      {lat:5.41389,lon:101.83333},{lat:4.00000,lon:101.83333},
+      {lat:3.41775,lon:102.12369},
+    ]
+  },
+  {
+    id: 'nfa', label: 'NFA', altLabel: 'SFC–FL550',
+    color: { fill: 'rgba(220,38,38,0.14)', stroke: '#B91C1C' },
+    points: [
+      {lat:2.50000,lon:104.28333},{lat:2.50000,lon:104.98278},
+      {lat:2.37500,lon:105.02000},{lat:1.90667,lon:105.08667},
+      {lat:1.63333,lon:104.88333},{lat:1.50000,lon:104.66111},
+      {lat:1.50000,lon:104.33333},{lat:2.00000,lon:104.33333},
+      {lat:2.00000,lon:104.28333},
+    ]
+  },
+  {
+    id: 'aaea', label: 'AAEA', altLabel: 'SFC–FL550',
+    color: { fill: 'rgba(168,85,247,0.14)', stroke: '#9333EA' },
+    points: [
+      {lat:2.50000,lon:104.28333},{lat:2.50000,lon:105.25056},
+      {lat:2.26667,lon:105.33333},{lat:1.50000,lon:104.86667},
+      {lat:1.50000,lon:104.33333},{lat:2.00000,lon:104.33333},
+      {lat:2.00000,lon:104.28333},
+    ]
+  },
+  {
+    id: 'cce', label: 'CCE', altLabel: '250–5,000 FT',
+    color: { fill: 'rgba(202,138,4,0.20)', stroke: '#A16207' },
+    points: [
+      {lat:1.70667,lon:104.42333},{lat:1.55667,lon:104.04167},
+      {lat:1.42500,lon:103.99167},{lat:1.35667,lon:104.00500},
+      {lat:1.55000,lon:104.50500},
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SOUTH CHINA SEA DANGER AREAS (SCSDA)
+//  Source: AIP Malaysia ENR 5.1 (CAAM) & AIP Singapore ENR 5.1 (CAAS)
+//  All areas rectangular, defined by lat/lon bounding boxes.
+//  WMD prefix = Malaysia-designated | WSD prefix = Singapore-designated
+//  WMD8 lon bounds corrected to 104°17′–104°36′E per current chart (aligned with WMD12/WMD21 column)
+//  WMD13 coordinates match WSD13 / Area Kilo per AIP Malaysia ENR 5.1-20
+// ═══════════════════════════════════════════════════════════════════════════
+const SCSDA_AREAS = [
+  // ── Lat band 01°30′N – 02°00′N ───────────────────────────────────────────
+  {
+    // Source: AIP Malaysia ENR 5.1, AMDT 3/2011, page ENR 5.1-18
+    // BTN LAT 013000N–020000N, LONG 1042000E–1043500E
+    id:'wmd8',  label:'WMD8',  name:'China Sea N Range', altLabel:'SFC–FL550',
+    color:{ fill:'rgba(251,146,60,0.16)', stroke:'#C2590A' },
+    points:[{lat:1.5,lon:104.3333},{lat:1.5,lon:104.5833},{lat:2.0,lon:104.5833},{lat:2.0,lon:104.3333}]
+  },
+  {
+    id:'wsd14', label:'WSD14', name:'Area Lima',          altLabel:'SFC–FL550',
+    color:{ fill:'rgba(220,38,38,0.13)',  stroke:'#B91C1C' },
+    points:[{lat:1.5,lon:104.6000},{lat:1.5,lon:104.9167},{lat:2.0,lon:104.9167},{lat:2.0,lon:104.6000}]
+  },
+  {
+    id:'wsd15', label:'WSD15', name:'Area Mike',          altLabel:'SFC–FL550',
+    color:{ fill:'rgba(220,38,38,0.13)',  stroke:'#B91C1C' },
+    points:[{lat:1.5,lon:104.9167},{lat:1.5,lon:105.5000},{lat:2.0,lon:105.5000},{lat:2.0,lon:104.9167}]
+  },
+  // ── Lat band 02°00′N – 02°30′N ───────────────────────────────────────────
+  {
+    id:'wmd12', label:'WMD12', name:'Area Juliet',        altLabel:'SFC–FL550',
+    color:{ fill:'rgba(251,146,60,0.16)', stroke:'#C2590A' },
+    points:[{lat:2.0,lon:104.2833},{lat:2.0,lon:104.6000},{lat:2.5,lon:104.6000},{lat:2.5,lon:104.2833}]
+  },
+  {
+    // Designated WMD13 in user request; matches WSD13 / Area Kilo per AIP Malaysia ENR 5.1-20
+    id:'wmd13', label:'WMD13', name:'Area Kilo',          altLabel:'SFC–FL550',
+    color:{ fill:'rgba(251,146,60,0.16)', stroke:'#C2590A' },
+    points:[{lat:2.0,lon:104.6000},{lat:2.0,lon:104.9167},{lat:2.5,lon:104.9167},{lat:2.5,lon:104.6000}]
+  },
+  {
+    id:'wsd44', label:'WSD44', name:'Naval Exer Area',    altLabel:'SFC–FL550',
+    color:{ fill:'rgba(220,38,38,0.13)',  stroke:'#B91C1C' },
+    points:[{lat:2.0,lon:104.9167},{lat:2.0,lon:105.2083},{lat:2.5,lon:105.2083},{lat:2.5,lon:104.9167}]
+  },
+  {
+    id:'wsd45', label:'WSD45', name:'Naval Exer Area',    altLabel:'SFC–FL550',
+    color:{ fill:'rgba(220,38,38,0.13)',  stroke:'#B91C1C' },
+    points:[{lat:2.0,lon:105.2083},{lat:2.0,lon:105.5000},{lat:2.5,lon:105.5000},{lat:2.5,lon:105.2083}]
+  },
+  // ── Lat band 02°30′N – 03°00′N ───────────────────────────────────────────
+  {
+    id:'wmd21', label:'WMD21', name:'Area Golf',          altLabel:'SFC–2,000 FT',
+    color:{ fill:'rgba(251,191,36,0.16)', stroke:'#A16207' },
+    points:[{lat:2.5,lon:104.2833},{lat:2.5,lon:104.6000},{lat:3.0,lon:104.6000},{lat:3.0,lon:104.2833}]
+  },
+  {
+    id:'wsd20', label:'WSD20', name:'Area Hotel',         altLabel:'SFC–2,000 FT',
+    color:{ fill:'rgba(251,191,36,0.16)', stroke:'#A16207' },
+    points:[{lat:2.5,lon:104.6000},{lat:2.5,lon:104.9167},{lat:3.0,lon:104.9167},{lat:3.0,lon:104.6000}]
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AIRWAY ROUTES  (AIP Singapore ENR 3.1 / 3.2 — always rendered, not in localStorage)
+// ═══════════════════════════════════════════════════════════════════════════
+const AIRWAY_ROUTES = [
+  { designator:'A464', lower:'FL245', upper:'FL460', visible:true,
+    points:[{lat:1.6150,lon:103.1200},{lat:1.4983,lon:103.3400},{lat:1.4581,lon:103.4139},
+            {lat:1.3436,lon:103.6294},{lat:1.2225,lon:103.8542},{lat:1.2019,lon:103.8969},
+            {lat:1.0572,lon:104.1964},{lat:0.9036,lon:104.5144}] },
+  { designator:'A576', lower:'FL245', upper:'FL460', visible:true,
+    points:[{lat:1.5517,lon:103.0892},{lat:1.4467,lon:103.3356},
+            {lat:1.3244,lon:103.6194},{lat:1.2225,lon:103.8542}] },
+  { designator:'B469', lower:'FL245', upper:'FL460', visible:true,
+    points:[{lat:3.3831,lon:103.4233},{lat:3.1550,lon:103.5258},{lat:2.8947,lon:103.6433},
+            {lat:2.7269,lon:103.7189},{lat:2.3883,lon:103.8717},{lat:1.9222,lon:103.9014},
+            {lat:1.7561,lon:103.9119},{lat:1.5897,lon:103.9228},{lat:1.4233,lon:103.9333},
+            {lat:1.2225,lon:103.8542},{lat:1.1889,lon:103.8689},{lat:0.9797,lon:103.9539},
+            {lat:0.7550,lon:104.0450},{lat:0.3400,lon:104.2231},{lat:-0.4831,lon:104.5761}] },
+  { designator:'N884', lower:'FL245', upper:'FL460', visible:true,
+    points:[{lat:2.3883,lon:103.8717},{lat:2.6900,lon:104.6589},{lat:2.8950,lon:105.1911},
+            {lat:2.9172,lon:105.2492},{lat:3.0517,lon:105.5994},{lat:3.2439,lon:106.1011},
+            {lat:3.5614,lon:106.9261},{lat:4.7286,lon:108.3775},{lat:7.2756,lon:111.5453},
+            {lat:9.8269,lon:114.8081}] },
+  { designator:'N892', lower:'FL245', upper:'FL460', visible:true,
+    points:[{lat:7.0883,lon:108.1533},{lat:4.2881,lon:106.2131},{lat:3.7389,lon:105.5369},
+            {lat:3.4739,lon:105.2100},{lat:3.0381,lon:104.6731},{lat:2.8733,lon:104.4717},
+            {lat:2.5769,lon:104.1050},{lat:2.3883,lon:103.8717}] },
+  { designator:'P501', lower:'FL245', upper:'FL460', visible:true,
+    points:[{lat:1.6150,lon:103.1200},{lat:1.2650,lon:103.3500},{lat:1.0417,lon:103.4983},
+            {lat:0.5633,lon:103.9925},{lat:0.3400,lon:104.2231},{lat:-0.2833,lon:104.8667}] },
+  { designator:'G580', lower:'2000FT', upper:'FL460', visible:true,
+    points:[{lat:1.2225,lon:103.8542},{lat:1.3300,lon:104.4047},
+            {lat:1.3325,lon:104.5133},{lat:1.3631,lon:105.7881},{lat:1.3736,lon:106.2339}] },
+];
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  STATE
@@ -1553,7 +1897,7 @@ const S = {
   missions: [],          // see mission schema
   airspaces: [],         // see airspace schema
   datumPoints: [],       // global datum points [{id,label,lat,lon,symbol,color}]
-  layers: { airways:true, dpr:true, exercise:true, routes:true, aoo:true, datums:true },
+  layers: { tiles:true, airways:true, dpr:false, exercise:false, routes:true, aoo:false, datums:true, xbs:true, scsda:true },
   visibleMissions: new Set(),
   selectedMission: null,
   // pan/zoom
@@ -1571,6 +1915,10 @@ const S = {
   tempAirspaceGeom: null,
   tempAirspaceType: null,
   pulseTarget: null,  // { lon, lat, startTime } for map highlight animation
+  // presentation mode
+  presentationMode: false,
+  presentationFocus: null,   // mission id currently focused in presentation
+  blipTargets: [],           // [{lon,lat,startTime}] multi-point blip animation
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1645,7 +1993,23 @@ function fmtLon(dd) {
 // Using least-squares with normal equations for n >= 2 points.
 // For n=2 we fix shear=0 (similarity transform assumption).
 function computeTransform(pts) {
-  if (pts.length < 2) return null;
+  if (pts.length < 1) return null;
+  if (pts.length === 1) {
+    // 1-point calibration: valid only in tile-only mode (scale already defined by tiles)
+    if (!S.layers.tiles || S.baseImage) return null;
+    const p = pts[0];
+    const sc = S.transform ? S.transform.scaleDegreesPerPx : 2.118e-3; // preserve current scale
+    const scaleX = sc, scaleY = -sc; // isotropic, north-up
+    const offX = p.lon - scaleX * p.px;
+    const offY = p.lat - scaleY * p.py;
+    return {
+      fwd:  (px, py)   => ({ lon: scaleX * px + offX, lat: scaleY * py + offY }),
+      inv:  (lon, lat) => ({ px: (lon - offX) / scaleX, py: (lat - offY) / scaleY }),
+      scaleMetersPerPx:  sc * 111320,
+      scaleDegreesPerPx: sc,
+      xOk: true, yOk: true,
+    };
+  }
   if (pts.length === 2) {
     // Scale-only (axis-aligned) for 2 points
     const [p1, p2] = pts;
@@ -1768,9 +2132,36 @@ function saveToStorage() {
   try { localStorage.setItem('skyplot', JSON.stringify(data)); } catch(e) {}
 }
 
+function saveDefaultToStorage() {
+  // Persists calibration + map as a baseline that survives session clears.
+  const data = {
+    calibPoints: S.calibPoints,
+    baseImageSrc: S.baseImageSrc,
+    panX: S.panX, panY: S.panY, zoom: S.zoom,
+    layers: S.layers,
+  };
+  try {
+    localStorage.setItem('skyplot-default', JSON.stringify(data));
+    return true;
+  } catch(e) {
+    // Likely quota exceeded (large map image)
+    // Try without the image src
+    try {
+      data.baseImageSrc = null;
+      localStorage.setItem('skyplot-default', JSON.stringify(data));
+      return 'no-image'; // saved but image too large to store
+    } catch(e2) { return false; }
+  }
+}
+
+function clearDefaultFromStorage() {
+  localStorage.removeItem('skyplot-default');
+}
+
 function loadFromStorage() {
   try {
-    const raw = localStorage.getItem('skyplot');
+    // Use active session if present; otherwise fall back to saved default
+    const raw = localStorage.getItem('skyplot') || localStorage.getItem('skyplot-default');
     if (!raw) return;
     const data = JSON.parse(raw);
     S.calibPoints  = data.calibPoints || [];
@@ -1836,33 +2227,133 @@ function resizeCanvas() {
   render();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  OSM TILE LAYER
+// ═══════════════════════════════════════════════════════════════════════════
+const TILE_CACHE = new Map();   // `z/x/y` → HTMLImageElement | null | 'err'
+const TILE_CACHE_MAX = 512;
+
+function _osmURL(z, x, y) {
+  const s = 'abcd'[((x ^ y) + z) % 4];
+  return `https://${s}.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`;
+}
+function _lonToTX(lon, z) { return Math.floor((lon + 180) / 360 * (1 << z)); }
+function _latToTY(lat, z) {
+  const r = lat * Math.PI / 180;
+  return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * (1 << z));
+}
+function _txToLon(tx, z) { return tx / (1 << z) * 360 - 180; }
+function _tyToLat(ty, z) {
+  const n = Math.PI - 2 * Math.PI * ty / (1 << z);
+  return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+}
+
+function drawTileLayer() {
+  if (!S.transform) return;
+  const W = canvas.width, H = canvas.height;
+
+  // Geographic centre of the canvas viewport
+  const center = canvasToCoord(W / 2, H / 2);
+  if (!center) return;
+
+  // Tile zoom level matched to screen resolution
+  const mPerPx = (S.transform.scaleMetersPerPx || 236) / S.zoom;
+  const z = Math.min(16, Math.max(5, Math.round(Math.log2(156543 / mPerPx))));
+
+  // All tiles at zoom z are drawn at the same pixel size (square, isotropic Mercator)
+  const pxPerTile = (40075016 / (1 << z)) / mPerPx;
+
+  // Fractional Mercator tile coordinates of the canvas centre
+  const clat = center.lat * Math.PI / 180;
+  const cTX = (center.lon + 180) / 360 * (1 << z);
+  const cTY = (1 - Math.log(Math.tan(Math.PI / 4 + clat / 2)) / Math.PI) / 2 * (1 << z);
+
+  // Tile index range covering the canvas
+  const nX = Math.ceil((W / 2) / pxPerTile) + 1;
+  const nY = Math.ceil((H / 2) / pxPerTile) + 1;
+  const N = 1 << z;
+
+  if ((2 * nX + 1) * (2 * nY + 1) > 512) return; // sanity guard
+
+  ctx.globalAlpha = 0.55;
+  for (let tx = Math.floor(cTX) - nX; tx <= Math.floor(cTX) + nX; tx++) {
+    for (let ty = Math.floor(cTY) - nY; ty <= Math.floor(cTY) + nY; ty++) {
+      if (ty < 0 || ty >= N) continue;
+      const txw = ((tx % N) + N) % N; // wrap longitude
+
+      // Screen position of this tile's NW corner (pure Mercator — always square tiles)
+      const cx = W / 2 + (tx - cTX) * pxPerTile;
+      const cy = H / 2 + (ty - cTY) * pxPerTile;
+
+      if (cx + pxPerTile < 0 || cx > W || cy + pxPerTile < 0 || cy > H) continue;
+
+      const key = `${z}/${txw}/${ty}`;
+      if (!TILE_CACHE.has(key)) {
+        TILE_CACHE.set(key, null); // mark loading
+        if (TILE_CACHE.size > TILE_CACHE_MAX) {
+          TILE_CACHE.delete(TILE_CACHE.keys().next().value); // evict oldest
+        }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload  = () => { TILE_CACHE.set(key, img); render(); };
+        img.onerror = () => TILE_CACHE.set(key, 'err');
+        img.src = _osmURL(z, txw, ty);
+      }
+      const tile = TILE_CACHE.get(key);
+      if (tile && tile !== 'err') {
+        ctx.drawImage(tile, cx, cy, pxPerTile, pxPerTile);
+      } else if (!tile) {
+        ctx.fillStyle = '#d4e8f0'; // placeholder while loading
+        ctx.fillRect(cx, cy, pxPerTile, pxPerTile);
+      }
+    }
+  }
+  ctx.globalAlpha = 1.0;
+
+  // OSM attribution (required by tile usage policy)
+  ctx.save();
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  const attr = '© OpenStreetMap contributors';
+  const aw = ctx.measureText(attr).width + 8;
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillRect(W - aw, H - 16, aw, 16);
+  ctx.fillStyle = '#333';
+  ctx.fillText(attr, W - 4, H - 2);
+  ctx.restore();
+}
+
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Tile base map — drawn in screen space before any transform
+  if (S.layers.tiles) drawTileLayer();
+
   ctx.save();
   ctx.translate(S.panX, S.panY);
   ctx.scale(S.zoom, S.zoom);
 
-  // Base image
+  // Base image (overlaid on top of tiles if both present)
   if (S.baseImage) {
     ctx.drawImage(S.baseImage, 0, 0);
-    document.getElementById('no-map-hint').style.display = 'none';
-  } else {
-    document.getElementById('no-map-hint').style.display = 'block';
   }
+  // Hide the "no map" hint whenever tiles are on OR an image is loaded
+  document.getElementById('no-map-hint').style.display =
+    (S.baseImage || S.layers.tiles) ? 'none' : 'block';
 
+  // Layer: South China Sea Danger Areas (lowest — reference background)
+  if (S.layers.scsda) drawScsda();
+  // Layer: BS26 pre-defined exercise zones
+  if (S.layers.xbs) drawXbsAreas();
   // Layer: Airways
   if (S.layers.airways) drawAirways();
-  // Layer: D/P/R
-  if (S.layers.dpr) drawDPR();
-  // Layer: Exercise
-  if (S.layers.exercise) drawExercise();
-  // Layer: Area of Ops
-  if (S.layers.aoo) drawAllAoo();
   // Layer: Routes + mission datums
   if (S.layers.routes) drawRoutes();
   // Layer: Global datum points (on top)
   if (S.layers.datums) drawGlobalDatums();
   if (S.pulseTarget) drawPulse(S.pulseTarget);
+  if (S.blipTargets && S.blipTargets.length) drawBlipTargets();
 
   ctx.restore();
 
@@ -1937,16 +2428,12 @@ function drawLabel(text, lon, lat, style) {
 }
 
 function drawAirways() {
-  for (const as of S.airspaces) {
-    if (as.type !== 'airway') continue;
-    if (as.visible === false) continue;
-    if (!as.points || as.points.length < 2) continue;
-    drawPolyline(as.points, { color: '#032B43', width: 3 });
-    // Label at midpoint
-    if (as.designator) {
-      const mid = as.points[Math.floor(as.points.length/2)];
-      drawLabel(as.designator, mid.lon, mid.lat, { size:12, weight:700, color:'#032B43', bg:'rgba(255,255,255,0.7)' });
-    }
+  for (const aw of AIRWAY_ROUTES) {
+    if (aw.visible === false) continue;
+    if (!aw.points || aw.points.length < 2) continue;
+    drawPolyline(aw.points, { color: '#032B43', width: 0.9 });
+    const mid = aw.points[Math.floor(aw.points.length / 2)];
+    drawLabel(aw.designator, mid.lon, mid.lat, { size:12, weight:700, color:'#032B43', bg:'rgba(255,255,255,0.7)' });
   }
 }
 
@@ -1980,6 +2467,80 @@ function drawExercise() {
   }
 }
 
+function drawXbsAreas() {
+  for (const area of XBS_AREAS) {
+    if (area.visible === false) continue;
+    if (!area.points || area.points.length < 3) continue;
+    const col = area.color;
+    drawPolygonFill(area.points, { fill: col.fill, stroke: col.stroke, width: 1.5, dash:[8,4] });
+    // Label: name on top line, altitude on second line
+    const c = centroid(area.points);
+    const p = coordToImgPx(c.lon, c.lat);
+    if (!p) continue;
+    const sz = 11 / S.zoom;
+    const szSub = 9 / S.zoom;
+    const pad = 3 / S.zoom;
+    const lineGap = 2 / S.zoom;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Measure both lines
+    ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
+    const w1 = ctx.measureText(area.label).width;
+    ctx.font = `600 ${szSub}px Manrope,'Segoe UI',system-ui`;
+    const w2 = ctx.measureText(area.altLabel).width;
+    const boxW = Math.max(w1, w2) + pad*2;
+    const boxH = sz + szSub + lineGap + pad*2;
+    const bx = p.px - boxW/2, by = p.py - boxH/2;
+    ctx.fillStyle = 'rgba(255,255,255,0.80)';
+    ctx.fillRect(bx, by, boxW, boxH);
+    // Line 1
+    ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
+    ctx.fillStyle = col.stroke;
+    ctx.fillText(area.label, p.px, by + pad + sz/2);
+    // Line 2
+    ctx.font = `600 ${szSub}px Manrope,'Segoe UI',system-ui`;
+    ctx.fillStyle = '#444';
+    ctx.fillText(area.altLabel, p.px, by + pad + sz + lineGap + szSub/2);
+    ctx.restore();
+  }
+}
+
+function drawScsda() {
+  for (const area of SCSDA_AREAS) {
+    if (area.visible === false) continue;
+    if (!area.points || area.points.length < 3) continue;
+    const col = area.color;
+    drawPolygonFill(area.points, { fill: col.fill, stroke: col.stroke, width: 1.2, dash:[4,3] });
+    const c = centroid(area.points);
+    const p = coordToImgPx(c.lon, c.lat);
+    if (!p) continue;
+    const sz    = 10 / S.zoom;
+    const szSub =  8 / S.zoom;
+    const pad   =  3 / S.zoom;
+    const gap   =  2 / S.zoom;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
+    const w1 = ctx.measureText(area.label).width;
+    ctx.font = `500 ${szSub}px Manrope,'Segoe UI',system-ui`;
+    const w2 = ctx.measureText(area.altLabel).width;
+    const boxW = Math.max(w1, w2) + pad * 2;
+    const boxH = sz + szSub + gap + pad * 2;
+    const bx = p.px - boxW / 2, by = p.py - boxH / 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.78)';
+    ctx.fillRect(bx, by, boxW, boxH);
+    ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
+    ctx.fillStyle = col.stroke;
+    ctx.fillText(area.label, p.px, by + pad + sz / 2);
+    ctx.font = `500 ${szSub}px Manrope,'Segoe UI',system-ui`;
+    ctx.fillStyle = '#555';
+    ctx.fillText(area.altLabel, p.px, by + pad + sz + gap + szSub / 2);
+    ctx.restore();
+  }
+}
+
 function drawAllAoo() {
   for (const m of S.missions) {
     if (!S.visibleMissions.has(m.id)) continue;
@@ -1997,9 +2558,11 @@ function drawAllAoo() {
 function drawRoutes() {
   for (const m of S.missions) {
     if (!S.visibleMissions.has(m.id)) continue;
+    const isFocused = !S.presentationFocus || m.id === S.presentationFocus;
+    if (!isFocused) { ctx.save(); ctx.globalAlpha = 0.06; }
     // Route line uses centroid for AO waypoints (lat/lon already computed)
     const pts = (m.waypoints || []).filter(w => w.lat != null && w.lon != null);
-    if (pts.length >= 2) drawPolyline(pts, { color: m.color, width: 2 });
+    if (pts.length >= 2) drawPolyline(pts, { color: m.color, width: 3 });
 
     for (const wp of pts) {
       const p = coordToImgPx(wp.lon, wp.lat);
@@ -2007,7 +2570,7 @@ function drawRoutes() {
 
       if (wp.isAO && wp.aoVertices && wp.aoVertices.length >= 3) {
         // Draw AO polygon with mission colour, then a diamond at centroid
-        const fill = hexToRgba(m.color, 0.18);
+        const fill = hexToRgba(m.color, 0.25);
         drawPolygonFill(convexHull(wp.aoVertices), { fill, stroke: m.color, width: 1.5, dash:[5,3] });
         // Diamond marker at centroid
         ctx.save();
@@ -2052,6 +2615,7 @@ function drawRoutes() {
       if (dp.lat == null || dp.lon == null) continue;
       drawDatumMarker(dp.lon, dp.lat, 'circle-cross', m.color, dp.label);
     }
+    if (!isFocused) ctx.restore();
   }
 }
 
@@ -2066,7 +2630,7 @@ function drawGlobalDatums() {
 function drawDatumMarker(lon, lat, symbol, color, label) {
   const p = coordToImgPx(lon, lat);
   if (!p) return;
-  const sz = 7 / S.zoom;
+  const sz = 5 / S.zoom;
   ctx.save();
   ctx.fillStyle = color;
   ctx.strokeStyle = '#fff';
@@ -2416,8 +2980,16 @@ function fitImageToCanvas() {
 //  CALIBRATION UI
 // ═══════════════════════════════════════════════════════════════════════════
 function openCalibrationModal() {
+  const note = document.getElementById('calib-min-pts-note');
+  if (note) {
+    if (S.layers.tiles && !S.baseImage) {
+      note.innerHTML = '1 point sufficient <span style="color:var(--green);font-weight:600">(OSM Base Map active)</span>.';
+    } else {
+      note.textContent = 'Minimum 2 points required.';
+    }
+  }
   renderCalibTable();
-  updateCalibScale();   // show axis warnings immediately if data is already bad
+  updateCalibScale();
   openModal('modal-calib');
 }
 
@@ -2493,8 +3065,33 @@ function clearCalibration() {
   render();
 }
 
+function handleSaveDefault() {
+  if (S.calibPoints.length < 2 && !S.baseImageSrc) {
+    alert('No calibration or map to save. Load a map and calibrate first.');
+    return;
+  }
+  const btn = document.getElementById('btn-save-default');
+  const result = saveDefaultToStorage();
+  if (result === true) {
+    btn.textContent = '✓ Default Saved';
+    btn.style.color = '#16a34a';
+    setTimeout(() => { btn.textContent = '💾 Save as Default'; btn.style.color = ''; }, 2500);
+  } else if (result === 'no-image') {
+    btn.textContent = '✓ Saved (calib only)';
+    btn.style.color = '#d97706';
+    setTimeout(() => { btn.textContent = '💾 Save as Default'; btn.style.color = ''; }, 3000);
+    alert('Calibration saved as default.\n\nNote: The map image was too large to store alongside the calibration. You will need to reload the image manually, but calibration points will be remembered.');
+  } else {
+    alert('Failed to save default — storage may be full.');
+  }
+}
+
 function applyCalibration() {
-  if (S.calibPoints.length < 2) { alert('Add at least 2 calibration points.'); return; }
+  const minPts = (S.layers.tiles && !S.baseImage) ? 1 : 2;
+  if (S.calibPoints.length < minPts) {
+    alert(minPts === 1 ? 'Add at least 1 calibration point.' : 'Add at least 2 calibration points.');
+    return;
+  }
   const t = computeTransform(S.calibPoints);
   if (!t) { alert('Could not compute transform — ensure points are not collinear.'); return; }
   if (!t.xOk) {
@@ -3383,11 +3980,11 @@ function drawPulse(pt) {
 // ═══════════════════════════════════════════════════════════════════════════
 function setupLayerToggles() {
   const map = [
+    ['lr-tiles',    'tiles'],
+    ['lr-scsda',    'scsda'],
+    ['lr-xbs',      'xbs'],
     ['lr-airways',  'airways'],
-    ['lr-dpr',      'dpr'],
-    ['lr-exercise', 'exercise'],
     ['lr-routes',   'routes'],
-    ['lr-aoo',      'aoo'],
     ['lr-datums',   'datums'],
   ];
   map.forEach(([elId, key]) => {
@@ -3438,7 +4035,9 @@ function updateMissionCards() {
   }
   S.missions.forEach(m => {
     const card = document.createElement('div');
-    card.className = 'mission-card' + (m.id === S.selectedMission ? ' selected' : '');
+    card.className = 'mission-card' +
+      (S.presentationFocus === m.id ? ' pres-focused' :
+       m.id === S.selectedMission ? ' selected' : '');
     card.innerHTML = `
       <div class="mission-card-color" style="background:${m.color}"></div>
       <div class="mission-card-inner">
@@ -3458,6 +4057,7 @@ function updateMissionCards() {
       </div>`;
     card.addEventListener('click', e => {
       if (e.target.classList.contains('btn-xs')) return;
+      if (S.presentationMode) { openPresentationFocus(m); return; }
       S.selectedMission = S.selectedMission === m.id ? null : m.id;
       updateMissionCards(); render();
     });
@@ -3505,6 +4105,146 @@ function toggleSidebar() {
 function toggleRightPanel() {
   const rp = document.getElementById('right-panel');
   rp.classList.toggle('collapsed');
+  setTimeout(() => { resizeCanvas(); }, 300);
+}
+
+// ─── Presentation Mode ──────────────────────────────────────────────────────
+function togglePresentationMode() {
+  S.presentationMode = !S.presentationMode;
+  document.getElementById('pres-toggle-btn').classList.toggle('active', S.presentationMode);
+  if (!S.presentationMode) closePresentationFocus();
+}
+
+function openPresentationFocus(m) {
+  S.presentationFocus = m.id;
+  // Blip all waypoints simultaneously
+  const pts = (m.waypoints || []).filter(w => w.lat != null && w.lon != null);
+  const now = performance.now();
+  S.blipTargets = pts.map(w => ({ lon: w.lon, lat: w.lat, startTime: now }));
+  // Animated zoom-to-fit at ~70% of visible canvas height (leaving room for slide-up panel)
+  if (pts.length > 0 && S.transform) {
+    let minLon=Infinity, maxLon=-Infinity, minLat=Infinity, maxLat=-Infinity;
+    pts.forEach(p => {
+      minLon=Math.min(minLon,p.lon); maxLon=Math.max(maxLon,p.lon);
+      minLat=Math.min(minLat,p.lat); maxLat=Math.max(maxLat,p.lat);
+    });
+    const p1 = coordToImgPx(minLon, minLat);
+    const p2 = coordToImgPx(maxLon, maxLat);
+    if (p1 && p2) {
+      const cont = document.getElementById('canvas-container');
+      const panelH = 260; // approximate height of slide-up panel
+      const useW = cont.clientWidth  * 0.70;
+      const useH = (cont.clientHeight - panelH) * 0.70;
+      const spanPx = Math.max(Math.abs(p2.px - p1.px), 1);
+      const spanPy = Math.max(Math.abs(p2.py - p1.py), 1);
+      const fitZ = Math.max(0.1, Math.min(20, Math.min(useW / spanPx, useH / spanPy)));
+      const cx = (p1.px + p2.px) / 2;
+      const cy = (p1.py + p2.py) / 2;
+      const snappedZ = snapToTileZoom(fitZ);
+      const toPanX = cont.clientWidth  / 2 - cx * snappedZ;
+      const toPanY = (cont.clientHeight - panelH) / 2 - cy * snappedZ;
+      animatePanZoom(toPanX, toPanY, snappedZ, 700);
+    }
+  }
+  populatePresentationPanel(m);
+  document.getElementById('presentation-panel').classList.add('visible');
+  updateMissionCards();
+  render();
+}
+
+function closePresentationFocus() {
+  S.presentationFocus = null;
+  S.blipTargets = [];
+  document.getElementById('presentation-panel').classList.remove('visible');
+  updateMissionCards();
+  render();
+}
+
+function populatePresentationPanel(m) {
+  document.getElementById('pres-color-strip').style.background = m.color;
+  document.getElementById('pres-callsign').textContent = m.callsign;
+  document.getElementById('pres-sub').textContent =
+    `${m.acftCount}× ${m.acftType}  ·  ${m.depICAO||'—'} → ${m.arrICAO||'—'}  ·  ${m.etd||'—'} – ${m.eta||'—'}`;
+  const wpts = (m.waypoints || []).filter(w => w.lat != null && !w.isAO);
+  let html = `<div class="pres-section-title">Waypoints (${wpts.length})</div><ul class="pres-wpt-list">`;
+  wpts.forEach((wp, i) => {
+    const tot = wp.totEarly && wp.totLate ? `${wp.totEarly} – ${wp.totLate}`
+              : (wp.totEarly || wp.totLate || '');
+    html += `<li class="pres-wpt-row">
+      <div class="pres-wpt-num">${i+1}</div>
+      <div class="pres-wpt-info">
+        ${wp.label ? `<div class="pres-wpt-label">${wp.label}</div>` : ''}
+        <div class="pres-wpt-coords">${formatLat(wp.lat)}  ${formatLon(wp.lon)}</div>
+      </div>
+      ${tot ? `<div class="pres-wpt-tot">${tot}</div>` : ''}
+    </li>`;
+  });
+  html += '</ul>';
+  document.getElementById('pres-body').innerHTML = html;
+}
+
+let _panZoomActive = false;
+
+function snapToTileZoom(desiredSZoom) {
+  if (!S.transform) return desiredSZoom;
+  const base = S.transform.scaleMetersPerPx || 236;
+  let best = desiredSZoom, bestDiff = Infinity;
+  for (let tz = 5; tz <= 16; tz++) {
+    const sZoom = base / (156543 / (1 << tz));
+    const diff = Math.abs(sZoom - desiredSZoom);
+    if (diff < bestDiff) { bestDiff = diff; best = sZoom; }
+  }
+  return Math.max(0.1, Math.min(20, best));
+}
+
+function animatePanZoom(toPanX, toPanY, toZoom, duration) {
+  const startPanX = S.panX, startPanY = S.panY, startZoom = S.zoom;
+  const startTime = performance.now();
+  _panZoomActive = true;
+  // ease-out cubic: fast start, smooth deceleration — feels responsive
+  function ease(t) { return 1 - Math.pow(1 - t, 3); }
+  function step(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    const e = ease(t);
+    S.panX = startPanX + (toPanX - startPanX) * e;
+    S.panY = startPanY + (toPanY - startPanY) * e;
+    S.zoom = startZoom + (toZoom  - startZoom) * e;
+    updateZoomStatus();
+    render(); // render() calls drawBlipTargets(); blip won't double-schedule while we're active
+    if (t < 1) requestAnimationFrame(step);
+    else _panZoomActive = false;
+  }
+  requestAnimationFrame(step);
+}
+
+function drawBlipTargets() {
+  const now = performance.now();
+  const dur = 1600;
+  let anyActive = false;
+  for (const bt of S.blipTargets) {
+    const elapsed = now - bt.startTime;
+    if (elapsed > dur) continue;
+    anyActive = true;
+    const p = coordToImgPx(bt.lon, bt.lat);
+    if (!p) continue;
+    const t = elapsed / dur;
+    const alpha = Math.pow(1 - t, 1.5);
+    const r = (4 + t * 30) / S.zoom;
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+    ctx.lineWidth = (2.5 - t * 2) / S.zoom;
+    ctx.beginPath();
+    ctx.arc(p.px, p.py, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = `rgba(255,255,255,${alpha * 0.6})`;
+    ctx.beginPath();
+    ctx.arc(p.px, p.py, 3 / S.zoom, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  // Only schedule our own rAF when panZoom isn't already driving the render loop
+  if (anyActive && !_panZoomActive) requestAnimationFrame(() => render());
+  else if (!anyActive) S.blipTargets = [];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3534,159 +4274,6 @@ function refreshAll() {
 // ═══════════════════════════════════════════════════════════════════════════
 //  MOCK / DEMO DATA
 // ═══════════════════════════════════════════════════════════════════════════
-function loadMockData() {
-  if (S.missions.length || S.datumPoints.length || S.airspaces.length) {
-    if (!confirm('This will replace all current data with demo data. Continue?')) return;
-  }
-
-  // ── Calibration (Singapore / Malay Peninsula area, ~800×600 image) ──────
-  S.calibPoints = [
-    { px: 100, py: 500, lat:  1.1667, lon: 103.5000 },  // SW corner
-    { px: 700, py: 100, lat:  3.5000, lon: 105.1667 },  // NE corner
-  ];
-  S.transform = computeTransform(S.calibPoints);
-
-  // ── Global Datum Points ──────────────────────────────────────────────────
-  S.datumPoints = [
-    { id: uid(), label: 'CP-1',        symbol: 'circle',   color: '#14BDEB', lat: 1.3521,  lon: 103.8198, visible: true },
-    { id: uid(), label: 'IP',          symbol: 'diamond',  color: '#f59e0b', lat: 2.0550,  lon: 103.4200, visible: true },
-    { id: uid(), label: 'RV ALPHA',    symbol: 'diamond',  color: '#f43f5e', lat: 2.7300,  lon: 104.2800, visible: true },
-    { id: uid(), label: 'EGRESS GATE', symbol: 'triangle', color: '#10b981', lat: 1.8800,  lon: 104.8500, visible: true },
-    { id: uid(), label: 'HOLD KILO',   symbol: 'square',   color: '#8b5cf6', lat: 3.1200,  lon: 103.9700, visible: true },
-  ];
-
-  // ── Airspaces ────────────────────────────────────────────────────────────
-  S.airspaces = [
-    {
-      id: uid(), type: 'airway', designator: 'A461',
-      lower: 'FL245', upper: 'FL460',
-      points: [
-        { lat: 1.3521, lon: 103.8198 },
-        { lat: 1.9000, lon: 103.6500 },
-        { lat: 2.5500, lon: 103.4200 },
-        { lat: 3.1000, lon: 103.2000 },
-      ],
-      visible: true,
-    },
-    {
-      id: uid(), type: 'danger', designator: 'D201',
-      lower: 'SFC', upper: 'FL100',
-      points: [
-        { lat: 2.2000, lon: 104.0000 },
-        { lat: 2.2000, lon: 104.4000 },
-        { lat: 2.5500, lon: 104.4000 },
-        { lat: 2.5500, lon: 104.0000 },
-      ],
-      visible: true,
-    },
-    {
-      id: uid(), type: 'restricted', designator: 'R102',
-      lower: 'SFC', upper: 'FL050',
-      points: [
-        { lat: 1.5500, lon: 104.5000 },
-        { lat: 1.5500, lon: 104.9000 },
-        { lat: 1.8000, lon: 104.9000 },
-        { lat: 1.8000, lon: 104.5000 },
-      ],
-      visible: true,
-    },
-    {
-      id: uid(), type: 'exercise', designator: 'EDA-301',
-      lower: 'FL050', upper: 'FL200',
-      points: [
-        { lat: 2.6000, lon: 103.7000 },
-        { lat: 2.6000, lon: 104.3500 },
-        { lat: 3.2000, lon: 104.3500 },
-        { lat: 3.2000, lon: 103.7000 },
-      ],
-      visible: true,
-    },
-  ];
-
-  // ── Missions ─────────────────────────────────────────────────────────────
-  const PALETTE = ['#14BDEB','#f59e0b','#10b981','#f43f5e','#8b5cf6'];
-  S.missions = [
-    {
-      id: uid(), callsign: 'FALCON 1', acftType: 'F-16C', acftCount: 2,
-      depICAO: 'WSSS', arrICAO: 'WMKK', etd: '0500H', eta: '0830H',
-      color: PALETTE[0],
-      waypoints: [
-        { id: uid(), lat: 1.3521,  lon: 103.8198, totEarly: '0500H', totLate: '0515H', label: 'WSSS' },
-        { id: uid(), lat: 1.7000,  lon: 103.7200, totEarly: '0530H', totLate: '0545H', label: 'CP-1' },
-        { id: uid(), lat: 2.0550,  lon: 103.4200, totEarly: '0600H', totLate: '0615H', label: 'IP' },
-        { id: uid(), lat: 2.7300,  lon: 104.2800, totEarly: '0700H', totLate: '0715H', label: 'TGT' },
-        { id: uid(), lat: 3.1200,  lon: 103.9700, totEarly: '0745H', totLate: '0800H', label: 'HOLD' },
-        { id: uid(), lat: 3.0700,  lon: 101.7000, totEarly: '0820H', totLate: '0830H', label: 'WMKK' },
-      ],
-      aoo: [
-        { lat: 2.5000, lon: 103.9000 },
-        { lat: 2.5000, lon: 104.6000 },
-        { lat: 3.0000, lon: 104.6000 },
-        { lat: 3.0000, lon: 103.9000 },
-      ],
-      datumPoints: [
-        { id: uid(), label: 'FAC',    lat: 2.7300, lon: 104.2800 },
-        { id: uid(), label: 'RESCUE', lat: 2.4500, lon: 104.0500 },
-      ],
-    },
-    {
-      id: uid(), callsign: 'EAGLE 2', acftType: 'F/A-18D', acftCount: 4,
-      depICAO: 'WMKK', arrICAO: 'WMKK', etd: '0545H', eta: '0900H',
-      color: PALETTE[1],
-      waypoints: [
-        { id: uid(), lat: 3.0700,  lon: 101.7000, totEarly: '0545H', totLate: '0600H', label: 'WMKK' },
-        { id: uid(), lat: 2.8500,  lon: 102.5000, totEarly: '0620H', totLate: '0635H', label: 'WP1' },
-        { id: uid(), lat: 2.8500,  lon: 103.7000, totEarly: '0650H', totLate: '0705H', label: 'FENCE IN' },
-        { id: uid(), lat: 2.9000,  lon: 104.2000, totEarly: '0720H', totLate: '0730H', label: 'TGT' },
-        { id: uid(), lat: 3.1200,  lon: 103.9700, totEarly: '0750H', totLate: '0800H', label: 'EGRESS' },
-        { id: uid(), lat: 3.0700,  lon: 101.7000, totEarly: '0845H', totLate: '0900H', label: 'WMKK' },
-      ],
-      aoo: [
-        { lat: 2.7000, lon: 103.8000 },
-        { lat: 2.7000, lon: 104.5000 },
-        { lat: 3.2000, lon: 104.5000 },
-        { lat: 3.2000, lon: 103.8000 },
-      ],
-      datumPoints: [
-        { id: uid(), label: 'STRIKE PT', lat: 2.9000, lon: 104.2000 },
-      ],
-    },
-    {
-      id: uid(), callsign: 'HAWK 3', acftType: 'C-130H', acftCount: 1,
-      depICAO: 'WSSS', arrICAO: 'WSSS', etd: '0600H', eta: '1000H',
-      color: PALETTE[2],
-      waypoints: [
-        { id: uid(), lat: 1.3521,  lon: 103.8198, totEarly: '0600H', totLate: '0615H', label: 'WSSS' },
-        { id: uid(), lat: 1.8800,  lon: 104.8500, totEarly: '0700H', totLate: '0715H', label: 'EGRESS GATE' },
-        { id: uid(), lat: 2.4000,  lon: 104.7500, totEarly: '0730H', totLate: '0750H', label: 'DZ ALPHA' },
-        { id: uid(), lat: 2.4000,  lon: 104.7500, totEarly: '0755H', totLate: '0815H', label: 'DZ BRAVO' },
-        { id: uid(), lat: 1.5000,  lon: 104.2000, totEarly: '0900H', totLate: '0915H', label: 'RTB WP' },
-        { id: uid(), lat: 1.3521,  lon: 103.8198, totEarly: '0945H', totLate: '1000H', label: 'WSSS' },
-      ],
-      aoo: [
-        { lat: 2.2000, lon: 104.5500 },
-        { lat: 2.2000, lon: 105.0500 },
-        { lat: 2.6500, lon: 105.0500 },
-        { lat: 2.6500, lon: 104.5500 },
-      ],
-      datumPoints: [],
-    },
-  ];
-
-  // All missions visible
-  S.visibleMissions = new Set(S.missions.map(m => m.id));
-
-  saveToStorage();
-  refreshAll();
-  updateStatusBar();
-
-  // Brief toast notification
-  const t = document.createElement('div');
-  t.style.cssText = 'position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:#032B43;color:#FFFBFF;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.3)';
-  t.textContent = 'Demo data loaded — 3 missions, 5 datums, 4 airspaces';
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  MISSION INFO PANEL
@@ -4104,10 +4691,43 @@ function initDefaultTransform() {
 // ═══════════════════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════════════════
+function toggleLayerExpand(key) {
+  const sub = document.getElementById('ls-' + key);
+  const btn = document.getElementById('lx-' + key);
+  if (!sub) return;
+  const open = sub.style.display === 'block';
+  sub.style.display = open ? 'none' : 'block';
+  if (btn) btn.textContent = open ? '▸' : '▾';
+}
+
+function renderSubItems(containerId, items, labelFn) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  for (const item of items) {
+    const row = document.createElement('div');
+    row.className = 'layer-sub-item' + (item.visible !== false ? ' checked' : '');
+    row.innerHTML = `<span class="sub-checkbox"></span><span class="sub-label">${labelFn(item)}</span>`;
+    row.addEventListener('click', () => {
+      item.visible = item.visible === false ? true : false;
+      row.classList.toggle('checked', item.visible !== false);
+      render();
+    });
+    el.appendChild(row);
+  }
+}
+
+function buildLayerSubItems() {
+  renderSubItems('ls-scsda',   SCSDA_AREAS,    a => `${a.label} ${a.name}`);
+  renderSubItems('ls-xbs',     XBS_AREAS,      a => a.label);
+  renderSubItems('ls-airways', AIRWAY_ROUTES,  a => a.designator);
+}
+
 function init() {
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
   setupLayerToggles();
+  buildLayerSubItems();
   loadFromStorage();
   initDefaultTransform();
   refreshAll();
