@@ -4377,19 +4377,36 @@ function populatePresentationPanel(m) {
   document.getElementById('pres-callsign').textContent = m.callsign;
   document.getElementById('pres-sub').textContent =
     `${m.acftCount}× ${m.acftType}  ·  ${m.depICAO||'—'} → ${m.arrICAO||'—'}  ·  ${m.etd||'—'} – ${m.eta||'—'}`;
-  const wpts = (m.waypoints || []).filter(w => w.lat != null && !w.isAO);
+  const wpts = (m.waypoints || []).filter(w => w.lat != null);
+  let wptNum = 0;
   let html = `<div class="pres-section-title">Waypoints (${wpts.length})</div><ul class="pres-wpt-list">`;
-  wpts.forEach((wp, i) => {
+  wpts.forEach((wp) => {
     const tot = wp.totEarly && wp.totLate ? `${wp.totEarly} – ${wp.totLate}`
               : (wp.totEarly || wp.totLate || '');
-    html += `<li class="pres-wpt-row" style="cursor:pointer" onclick="highlightMapPoint(${wp.lon},${wp.lat})">
-      <div class="pres-wpt-num">${i+1}</div>
-      <div class="pres-wpt-info">
-        ${wp.label ? `<div class="pres-wpt-label">${wp.label}</div>` : ''}
-        <div class="pres-wpt-coords">${formatLat(wp.lat)}  ${formatLon(wp.lon)}</div>
-      </div>
-      ${tot ? `<div class="pres-wpt-tot">${tot}</div>` : ''}
-    </li>`;
+    if (wp.isAO) {
+      const verts = (wp.aoVertices || []).filter(v => v.lat != null && v.lon != null);
+      const vtxRows = verts.map((v, vi) =>
+        `<div class="pres-wpt-coords" style="margin-top:2px"><span style="color:var(--text-4);font-size:9px;margin-right:4px">${vi+1}.</span>${formatLat(v.lat)}  ${formatLon(v.lon)}</div>`
+      ).join('');
+      html += `<li class="pres-wpt-row" style="cursor:pointer;align-items:flex-start;padding-top:8px" onclick="highlightMapPoint(${wp.lon},${wp.lat})">
+        <div class="pres-wpt-num" style="background:#10b981;font-size:11px;margin-top:2px">▣</div>
+        <div class="pres-wpt-info" style="flex:1">
+          ${wp.label ? `<div class="pres-wpt-label">${wp.label}</div>` : ''}
+          ${vtxRows || '<div class="pres-wpt-coords" style="color:var(--text-4)">No vertices</div>'}
+        </div>
+        ${tot ? `<div class="pres-wpt-tot" style="margin-top:2px">${tot}</div>` : ''}
+      </li>`;
+    } else {
+      wptNum++;
+      html += `<li class="pres-wpt-row" style="cursor:pointer" onclick="highlightMapPoint(${wp.lon},${wp.lat})">
+        <div class="pres-wpt-num">${wptNum}</div>
+        <div class="pres-wpt-info">
+          ${wp.label ? `<div class="pres-wpt-label">${wp.label}</div>` : ''}
+          <div class="pres-wpt-coords">${formatLat(wp.lat)}  ${formatLon(wp.lon)}</div>
+        </div>
+        ${tot ? `<div class="pres-wpt-tot">${tot}</div>` : ''}
+      </li>`;
+    }
   });
   html += '</ul>';
   document.getElementById('pres-body').innerHTML = html;
