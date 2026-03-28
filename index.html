@@ -2902,6 +2902,28 @@ function handleMapClick(e) {
     return;
   }
 
+  if (S.drawMode === 'ao-vertex-pick') {
+    if (!coord) { alert('Map is not calibrated. Please calibrate first.'); return; }
+    const parts = S.drawTarget.split('__vtx__');
+    const itemId = parts[0], vtxIdx = parseInt(parts[1]);
+    const item = missionRouteItems.find(x => x.id === itemId);
+    if (item && item.aoVertices) {
+      if (!item.aoVertices[vtxIdx]) item.aoVertices[vtxIdx] = {};
+      item.aoVertices[vtxIdx].lat = coord.lat;
+      item.aoVertices[vtxIdx].lon = coord.lon;
+      const valid = item.aoVertices.filter(v => v.lat != null && v.lon != null);
+      if (valid.length > 0) {
+        item.lat = valid.reduce((s,v) => s + v.lat, 0) / valid.length;
+        item.lon = valid.reduce((s,v) => s + v.lon, 0) / valid.length;
+      }
+    }
+    closeDrawMode();
+    openModal('modal-mission');
+    renderRouteList();
+    render();
+    return;
+  }
+
   if (S.drawMode === 'aoo' || S.drawMode === 'airspace-poly' || S.drawMode === 'airspace-line') {
     if (!coord) { alert('Map is not calibrated. Please calibrate first.'); return; }
     S.drawPoints.push({ cx, cy, lon: coord.lon, lat: coord.lat });
@@ -3275,6 +3297,13 @@ function pickRouteItemOnMap(id) {
   startDraw('route-item-pick', 'CLICK POINT ON MAP', id);
 }
 
+function pickAOVertexOnMap(itemId, vtxIdx) {
+  S.drawSourceModal = null;
+  S.drawTarget = itemId + '__vtx__' + vtxIdx;
+  closeModal('modal-mission');
+  startDraw('ao-vertex-pick', 'CLICK VERTEX ON MAP', S.drawTarget);
+}
+
 function fillRouteItemCoord(id, coord) {
   const item = missionRouteItems.find(x => x.id === id);
   if (item) { item.lat = coord.lat; item.lon = coord.lon; }
@@ -3371,7 +3400,7 @@ function renderRouteList() {
       typeLabel = 'AOO Vertex';
     }
 
-    const srcDropdown = (item.type !== 'aoo' && hasGlobal) ? `
+    const srcDropdown = (item.type !== 'aoo' && !item.isAO && hasGlobal) ? `
       <div style="padding:0 0 4px 0">
         <select class="select mdp-src-select" style="height:26px;font-size:11px;width:auto;max-width:160px;color:var(--text-3)" onchange="applyRouteItemSource('${item.id}',this)" title="Import from existing datum">
           <option value="">From existing…</option>
@@ -3396,11 +3425,11 @@ function renderRouteList() {
         <button class="wp-del" onclick="removeRouteItem('${item.id}')">✕</button>
       </div>
       ${srcDropdown}
-      <div class="wp-coord-row" style="gap:5px;flex-wrap:nowrap">
+      ${!item.isAO ? `<div class="wp-coord-row" style="gap:5px;flex-wrap:nowrap">
         <input class="input mono coord-lat" style="flex:1;min-width:0" placeholder="012048N"  value="${item.lat != null ? fmtLat(item.lat) : ''}" oninput="updateRouteCoord('${item.id}',this.closest('[data-rid]'))">
         <input class="input mono coord-lon" style="flex:1;min-width:0" placeholder="1042424E" value="${item.lon != null ? fmtLon(item.lon) : ''}" oninput="updateRouteCoord('${item.id}',this.closest('[data-rid]'))">
         <button class="wp-pick-btn" onclick="pickRouteItemOnMap('${item.id}')" title="Pick on map">📍</button>
-      </div>
+      </div>` : ''}
       ${timeRow}`;
 
     // AO items get a nested vertices section
@@ -3422,6 +3451,7 @@ function renderRouteList() {
           <span class="ao-vertex-num">${vi + 1}.</span>
           <input class="input mono" style="flex:1;min-width:0;font-size:11px;height:26px;padding:0 6px" placeholder="012048N"  value="${v.lat != null ? fmtLat(v.lat) : ''}" oninput="updateAOVertex('${item.id}',${vi},this.closest('.ao-vertex-row'))">
           <input class="input mono" style="flex:1;min-width:0;font-size:11px;height:26px;padding:0 6px" placeholder="1042424E" value="${v.lon != null ? fmtLon(v.lon) : ''}" oninput="updateAOVertex('${item.id}',${vi},this.closest('.ao-vertex-row'))">
+          <button class="wp-pick-btn" style="flex-shrink:0;width:26px;padding:0" onclick="pickAOVertexOnMap('${item.id}',${vi})" title="Pick on map">📍</button>
           <button class="wp-del" style="flex-shrink:0" onclick="removeAOVertex('${item.id}',${vi})">✕</button>`;
         vtxSec.appendChild(vrow);
       });
@@ -4182,6 +4212,27 @@ function updateMissionCards() {
     });
     list.appendChild(card);
   });
+  // Separator + Flush button below last card
+  const sep = document.createElement('div');
+  sep.style.cssText = 'border-top:1px solid var(--border);margin:10px 12px 6px';
+  list.appendChild(sep);
+  const flush = document.createElement('button');
+  flush.className = 'btn-xs';
+  flush.style.cssText = 'width:calc(100% - 24px);margin:0 12px 10px;color:#ef4444';
+  flush.textContent = 'Flush Missions';
+  flush.onclick = flushMissions;
+  list.appendChild(flush);
+}
+
+function flushMissions() {
+  if (!confirm('Remove all missions?')) return;
+  S.missions = [];
+  S.visibleMissions = new Set();
+  S.selectedMission = null;
+  if (S.presentationFocus) closePresentationFocus();
+  saveToStorage();
+  updateMissionCards();
+  render();
 }
 
 function getMission(id) { return S.missions.find(m => m.id === id); }
@@ -4240,8 +4291,14 @@ function openPresentationFocus(m) {
   const pts = (m.waypoints || []).filter(w => w.lat != null && w.lon != null);
   const now = performance.now();
   S.blipTargets = pts.map(w => ({ lon: w.lon, lat: w.lat, startTime: now }));
-  // Animated zoom-to-fit at ~70% of visible canvas height (leaving room for slide-up panel)
-  if (pts.length > 0 && S.transform) {
+  // Show panel first so offsetHeight is accurate
+  populatePresentationPanel(m);
+  document.getElementById('presentation-panel').classList.add('visible');
+  updateMissionCards();
+  render();
+  // Compute fit after panel has laid out (offsetHeight reads correctly even mid-transition)
+  requestAnimationFrame(() => {
+    if (pts.length === 0 || !S.transform) return;
     let minLon=Infinity, maxLon=-Infinity, minLat=Infinity, maxLat=-Infinity;
     pts.forEach(p => {
       minLon=Math.min(minLon,p.lon); maxLon=Math.max(maxLon,p.lon);
@@ -4249,26 +4306,25 @@ function openPresentationFocus(m) {
     });
     const p1 = coordToImgPx(minLon, minLat);
     const p2 = coordToImgPx(maxLon, maxLat);
-    if (p1 && p2) {
-      const cont = document.getElementById('canvas-container');
-      const panelH = 260; // approximate height of slide-up panel
-      const useW = cont.clientWidth  * 0.70;
-      const useH = (cont.clientHeight - panelH) * 0.70;
-      const spanPx = Math.max(Math.abs(p2.px - p1.px), 1);
-      const spanPy = Math.max(Math.abs(p2.py - p1.py), 1);
-      const fitZ = Math.max(0.1, Math.min(20, Math.min(useW / spanPx, useH / spanPy)));
-      const cx = (p1.px + p2.px) / 2;
-      const cy = (p1.py + p2.py) / 2;
-      const snappedZ = snapToTileZoom(fitZ);
-      const toPanX = cont.clientWidth  / 2 - cx * snappedZ;
-      const toPanY = (cont.clientHeight - panelH) / 2 - cy * snappedZ;
-      animatePanZoom(toPanX, toPanY, snappedZ, 700);
-    }
-  }
-  populatePresentationPanel(m);
-  document.getElementById('presentation-panel').classList.add('visible');
-  updateMissionCards();
-  render();
+    if (!p1 || !p2) return;
+    const cont  = document.getElementById('canvas-container');
+    const panel = document.getElementById('presentation-panel');
+    const panelH = panel.offsetHeight || 260;
+    const padPx  = 60;
+    const availW = cont.clientWidth  - padPx * 2;
+    const availH = cont.clientHeight - panelH - padPx * 2;
+    const spanPx = Math.max(Math.abs(p2.px - p1.px), 1);
+    const spanPy = Math.max(Math.abs(p2.py - p1.py), 1);
+    const fitZ   = Math.max(0.1, Math.min(20, Math.min(availW / spanPx, availH / spanPy)));
+    const cx = (p1.px + p2.px) / 2;
+    const cy = (p1.py + p2.py) / 2;
+    // Clamp tile-snap so it never exceeds fitZ (snapping up would push route off-screen)
+    const snappedZ = Math.min(fitZ, snapToTileZoom(fitZ));
+    // Centre route in the usable area above the panel, offset down by half the top padding
+    const toPanX = cont.clientWidth  / 2 - cx * snappedZ;
+    const toPanY = (cont.clientHeight - panelH) / 2 + padPx / 2 - cy * snappedZ;
+    animatePanZoom(toPanX, toPanY, snappedZ, 700);
+  });
 }
 
 function closePresentationFocus() {
@@ -4289,7 +4345,7 @@ function populatePresentationPanel(m) {
   wpts.forEach((wp, i) => {
     const tot = wp.totEarly && wp.totLate ? `${wp.totEarly} – ${wp.totLate}`
               : (wp.totEarly || wp.totLate || '');
-    html += `<li class="pres-wpt-row">
+    html += `<li class="pres-wpt-row" style="cursor:pointer" onclick="highlightMapPoint(${wp.lon},${wp.lat})">
       <div class="pres-wpt-num">${i+1}</div>
       <div class="pres-wpt-info">
         ${wp.label ? `<div class="pres-wpt-label">${wp.label}</div>` : ''}
