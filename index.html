@@ -768,6 +768,17 @@ body {
   display: flex; align-items: center; justify-content: center;
 }
 .wp-del:hover { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
+.wp-seq-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+.wp-seq-btn {
+  width: 20px; height: 11px; padding: 0;
+  border-radius: 3px; border: 1px solid var(--border);
+  background: var(--bg-input); color: var(--text-3);
+  font-size: 7px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .1s, color .1s;
+}
+.wp-seq-btn:hover:not(:disabled) { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.wp-seq-btn:disabled { opacity: 0.25; cursor: default; }
 .wp-coord-row {
   display: flex;
   gap: 6px;
@@ -3254,6 +3265,15 @@ function removeRouteItem(id) {
   render();
 }
 
+function swapRouteItem(id, dir) {
+  const i = missionRouteItems.findIndex(x => x.id === id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= missionRouteItems.length) return;
+  [missionRouteItems[i], missionRouteItems[j]] = [missionRouteItems[j], missionRouteItems[i]];
+  renderRouteList();
+  render();
+}
+
 function updateRouteField(id, field, val) {
   const item = missionRouteItems.find(x => x.id === id);
   if (item) { item[field] = val; }
@@ -3293,14 +3313,16 @@ function applyRouteItemSource(id, select) {
 function pickRouteItemOnMap(id) {
   S.drawSourceModal = null;
   S.drawTarget = id;
-  closeModal('modal-mission');
+  // Hide modal directly — do NOT call closeModal() which would wipe missionRouteItems
+  document.getElementById('modal-mission').classList.add('hidden');
   startDraw('route-item-pick', 'CLICK POINT ON MAP', id);
 }
 
 function pickAOVertexOnMap(itemId, vtxIdx) {
   S.drawSourceModal = null;
   S.drawTarget = itemId + '__vtx__' + vtxIdx;
-  closeModal('modal-mission');
+  // Hide modal directly — do NOT call closeModal() which would wipe missionRouteItems
+  document.getElementById('modal-mission').classList.add('hidden');
   startDraw('ao-vertex-pick', 'CLICK VERTEX ON MAP', S.drawTarget);
 }
 
@@ -3418,10 +3440,18 @@ function renderRouteList() {
 
     const aooVtxIdx = item.type === 'aoo' ? missionRouteItems.filter(x=>x.type==='aoo').indexOf(item)+1 : 0;
 
+    const itemIdx = missionRouteItems.indexOf(item);
+    const canUp   = itemIdx > 0;
+    const canDown = itemIdx < missionRouteItems.length - 1;
+
     row.innerHTML = `
       <div class="waypoint-row-header">
         <div class="wp-num" style="${badgeStyle}">${badge}</div>
         ${item.type !== 'aoo' ? `<input class="input wp-label-input" placeholder="${item.type==='dat'?'Datum label':'Label (optional)'}" value="${item.label||''}" oninput="updateRouteField('${item.id}','label',this.value)">` : `<span style="font-size:11px;color:var(--text-3);flex:1">AOO Vertex ${aooVtxIdx}</span>`}
+        <div class="wp-seq-btns">
+          <button class="wp-seq-btn" onclick="swapRouteItem('${item.id}',-1)" title="Move up" ${canUp?'':'disabled'}>▲</button>
+          <button class="wp-seq-btn" onclick="swapRouteItem('${item.id}',1)"  title="Move down" ${canDown?'':'disabled'}>▼</button>
+        </div>
         <button class="wp-del" onclick="removeRouteItem('${item.id}')">✕</button>
       </div>
       ${srcDropdown}
