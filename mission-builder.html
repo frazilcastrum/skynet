@@ -197,6 +197,15 @@ html, body {
   white-space: nowrap;
 }
 .btn-add-mission:hover { border-color: var(--cyan); color: var(--navy); background: #f0faff; }
+.btn-clear-tab {
+  height: 30px; padding: 0 10px;
+  border-radius: 7px; border: 1.5px dashed #fca5a5; background: transparent;
+  font-size: 12px; font-weight: 600; font-family: inherit; color: #ef4444;
+  cursor: pointer; flex-shrink: 0;
+  transition: border-color .12s, color .12s, background .12s;
+  white-space: nowrap;
+}
+.btn-clear-tab:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
 
 /* ─── Form Grid ──────────────────────────────────────────────────────── */
 .form-grid { display: grid; gap: 8px; }
@@ -529,7 +538,7 @@ html, body {
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       Waypoints DB
     </button>
-    <button class="btn primary" onclick="downloadCSV()">&#8595;&nbsp; Download CSV</button>
+    <button class="btn primary" onclick="downloadCSV()">&#8595;&nbsp; Publish Missions</button>
   </div>
 </header>
 
@@ -543,7 +552,7 @@ html, body {
     <div class="mission-tabs-card">
       <span class="tabs-label">Missions</span>
       <div class="tabs-scroll" id="tabs-scroll"></div>
-      <button class="btn-add-mission" onclick="addMission()">＋ Add Mission</button>
+      <button class="btn-clear-tab" onclick="clearAll()" title="Reset all missions to a single blank mission">✕ Clear All</button>
     </div>
 
     <!-- Card 1: Mission Details -->
@@ -619,10 +628,9 @@ html, body {
       </div>
     </div>
 
-    <!-- Clear All -->
+    <!-- Add Mission -->
     <div class="clear-section">
-      <button class="btn danger" onclick="clearAll()">Clear All Missions</button>
-      <p class="clear-hint">Resets all missions to a single blank mission</p>
+      <button class="btn primary" onclick="addMission()">＋ Add Mission</button>
     </div>
 
   </div><!-- /left-col -->
@@ -693,9 +701,9 @@ html, body {
 // ═══════════════════════════════════════════════════════════════════════
 
 const COLORS = [
-  '#14BDEB','#f59e0b','#10b981','#f43f5e',
-  '#8b5cf6','#fb923c','#06b6d4','#84cc16',
-  '#888888','#1a1a1a'
+  '#1a1a1a','#14BDEB','#f59e0b','#10b981',
+  '#f43f5e','#8b5cf6','#fb923c','#06b6d4',
+  '#84cc16','#888888'
 ];
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
@@ -734,6 +742,12 @@ const BUILTIN_WAYPOINTS = [
   { code:'LENDA', name:'LENDA Waypoint (SG FIR)',              lat:'020000N',    lon:'1035000E'    },
   { code:'SAMKO', name:'SAMKO Waypoint (SG FIR)',              lat:'013000N',    lon:'1030000E'    },
   { code:'PARDI', name:'PARDI Waypoint (SG FIR)',              lat:'020000N',    lon:'1025000E'    },
+  // VORs / DMEs / Waypoints (AIP Singapore ENR)
+  { code:'SJ',    name:'SINJON DVOR/DME',                      lat:'011321N',    lon:'1035115E'    },
+  { code:'VTK',   name:'Tekong DVOR/DME',                      lat:'012455N',    lon:'1040120E'    },
+  { code:'VJB',   name:'Johor Bahru DVOR/DME',                 lat:'013950N',    lon:'1033939E'    },
+  { code:'HOSBA', name:'HOSBA Waypoint',                       lat:'011948N',    lon:'1042417E'    },
+  { code:'PU',    name:'Papa Uniform DVOR/DME',                lat:'012524N',    lon:'1035600E'    },
 ];
 
 // Custom waypoints — persisted to localStorage
@@ -780,9 +794,15 @@ let _lastLabelFocus = null; // { routeId } or null
 
 function validCoord(val, isLon) {
   if (!val) return true;
-  val = val.trim().toUpperCase();
-  if (isLon) return /^\d{6,7}(\.\d+)?[EW]$/.test(val);
-  return /^\d{5,6}(\.\d+)?[NS]$/.test(val);
+  val = val.trim().replace(/\s/g,'').toUpperCase();
+  // Decimal degrees — no suffix needed
+  if (/^[0-9]+\.[0-9]+$/.test(val)) {
+    const dec = parseFloat(val);
+    return !isNaN(dec) && (isLon ? dec <= 180 : dec <= 90);
+  }
+  // DMS with optional hemisphere suffix
+  if (isLon) return /^\d{5,7}(\.\d+)?[EW]?$/.test(val);
+  return /^\d{4,6}(\.\d+)?[NS]?$/.test(val);
 }
 
 function applyCoordValidation(input, isLon) {
@@ -1007,7 +1027,9 @@ function attachRouteListeners(el, item) {
     input.addEventListener('input', () => {
       const ri = M().route.find(r => r.id === input.dataset.id);
       if (!ri) return;
-      ri[input.dataset.field] = input.value;
+      ri[input.dataset.field] = input.dataset.islon !== undefined
+        ? input.value.replace(/\s/g,'')
+        : input.value;
       updatePreview();
       if (input.dataset.field === 'label') showSuggest(input, item.id);
     });
@@ -1027,7 +1049,7 @@ function attachRouteListeners(el, item) {
       if (!ri) return;
       const vtx = ri.vertices.find(v => v.id === input.dataset.vtxId);
       if (!vtx) return;
-      vtx[input.dataset.vtxField] = input.value;
+      vtx[input.dataset.vtxField] = input.value.replace(/\s/g,'');
       updatePreview();
     });
     input.addEventListener('input', () => applyCoordValidation(input, input.dataset.islon === 'true'));
