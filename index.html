@@ -2750,7 +2750,7 @@ function drawRoutes() {
         ctx.fill(); ctx.stroke();
         ctx.restore();
         // AO label at centroid
-        if (wp.label) drawLabel(wp.label, wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.85)', dy: -16 });
+        if (wp.label) drawLabel(wp.label, wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.85)', dy: 16 });
       } else {
         // Regular waypoint dot
         ctx.save();
@@ -2827,14 +2827,14 @@ function drawDatumMarker(lon, lat, symbol, color, label) {
     ctx.moveTo(p.px, p.py - sz*0.55); ctx.lineTo(p.px, p.py + sz*0.55);
     ctx.stroke();
     ctx.restore();
-    if (label) drawLabel(label, lon, lat, { size:11, weight:700, color, bg:'rgba(255,255,255,0.82)' });
+    if (label) drawLabel(label, lon, lat, { size:11, weight:700, color, bg:'rgba(255,255,255,0.82)', dy: 14 });
     return;
   } else {
     ctx.arc(p.px, p.py, sz, 0, Math.PI*2);
   }
   ctx.fill(); ctx.stroke();
   ctx.restore();
-  if (label) drawLabel(label, lon, lat, { size:11, weight:700, color, bg:'rgba(255,255,255,0.82)' });
+  if (label) drawLabel(label, lon, lat, { size:11, weight:700, color, bg:'rgba(255,255,255,0.82)', dy: 14 });
 }
 
 function drawActiveShape() {
@@ -4448,6 +4448,14 @@ function openPresentationFocus(m) {
     pts.forEach(p => {
       minLon=Math.min(minLon,p.lon); maxLon=Math.max(maxLon,p.lon);
       minLat=Math.min(minLat,p.lat); maxLat=Math.max(maxLat,p.lat);
+      // Also expand bbox to cover AO polygon vertices
+      if (p.isAO && p.aoVertices) {
+        p.aoVertices.forEach(v => {
+          if (v.lat == null || v.lon == null) return;
+          minLon=Math.min(minLon,v.lon); maxLon=Math.max(maxLon,v.lon);
+          minLat=Math.min(minLat,v.lat); maxLat=Math.max(maxLat,v.lat);
+        });
+      }
     });
     const p1 = coordToImgPx(minLon, minLat);
     const p2 = coordToImgPx(maxLon, maxLat);
