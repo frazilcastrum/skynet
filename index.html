@@ -2972,6 +2972,95 @@ canvas.addEventListener('dblclick', e => {
   }
 });
 
+// ── Touch support: single-finger pan, two-finger pinch-zoom, tap = click ──
+let _t1 = null, _tPanStart = null, _tMoved = false;
+let _pinchDist0 = null, _pinchZoom0 = null, _pinchPan0 = null, _pinchMid0 = null;
+let _lastTap = 0;
+
+function _touchPos(touch) {
+  const r = canvas.getBoundingClientRect();
+  return { x: touch.clientX - r.left, y: touch.clientY - r.top };
+}
+function _pDist(t1, t2) {
+  const dx = t1.clientX - t2.clientX, dy = t1.clientY - t2.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    _t1 = _touchPos(e.touches[0]);
+    _tMoved = false;
+    _tPanStart = { x: _t1.x - S.panX, y: _t1.y - S.panY };
+    _pinchDist0 = null;
+  } else if (e.touches.length === 2) {
+    const a = _touchPos(e.touches[0]), b = _touchPos(e.touches[1]);
+    _pinchDist0 = _pDist(e.touches[0], e.touches[1]);
+    _pinchZoom0 = S.zoom;
+    _pinchPan0  = { x: S.panX, y: S.panY };
+    _pinchMid0  = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    _tMoved = true; // prevent tap firing when fingers lift
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 1 && _tPanStart) {
+    const pos = _touchPos(e.touches[0]);
+    if (!_tMoved && (Math.abs(pos.x - _t1.x) > 4 || Math.abs(pos.y - _t1.y) > 4)) _tMoved = true;
+    if (_tMoved) {
+      S.panX = pos.x - _tPanStart.x;
+      S.panY = pos.y - _tPanStart.y;
+      render();
+      updateZoomStatus();
+    }
+  } else if (e.touches.length === 2 && _pinchDist0 != null) {
+    const d = _pDist(e.touches[0], e.touches[1]);
+    const newZoom = Math.max(0.05, Math.min(20, _pinchZoom0 * (d / _pinchDist0)));
+    const a = _touchPos(e.touches[0]), b = _touchPos(e.touches[1]);
+    const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+    // Keep the image point that was under the initial pinch midpoint fixed
+    const imgX = (_pinchMid0.x - _pinchPan0.x) / _pinchZoom0;
+    const imgY = (_pinchMid0.y - _pinchPan0.y) / _pinchZoom0;
+    S.panX = midX - imgX * newZoom;
+    S.panY = midY - imgY * newZoom;
+    S.zoom = newZoom;
+    render();
+    updateZoomStatus();
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (e.touches.length === 0) {
+    if (!_tMoved && _t1) {
+      // Tap → treat as map click
+      const now = Date.now();
+      const isDoubleTap = (now - _lastTap) < 300;
+      _lastTap = now;
+      if (isDoubleTap && (S.drawMode === 'aoo' || S.drawMode === 'airspace-poly' || S.drawMode === 'airspace-line')) {
+        finishDraw();
+      } else {
+        handleMapClick({ offsetX: _t1.x, offsetY: _t1.y });
+      }
+    } else if (_tMoved) {
+      saveToStorage();
+    }
+    _t1 = null; _tPanStart = null; _pinchDist0 = null;
+  } else if (e.touches.length === 1) {
+    // One finger released during pinch — resume single-finger pan from here
+    const pos = _touchPos(e.touches[0]);
+    _t1 = pos;
+    _tPanStart = { x: pos.x - S.panX, y: pos.y - S.panY };
+    _pinchDist0 = null;
+    _tMoved = true; // don't fire tap when last finger lifts
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchcancel', () => {
+  _t1 = null; _tPanStart = null; _pinchDist0 = null; _tMoved = false;
+});
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') cancelDraw();
   if ((e.key === 'z' || e.key === 'Z') && (e.ctrlKey||e.metaKey) && S.drawPoints.length > 0) {
