@@ -2276,8 +2276,12 @@ const ctx = canvas.getContext('2d');
 
 function resizeCanvas() {
   const cont = document.getElementById('canvas-container');
-  canvas.width  = cont.clientWidth;
-  canvas.height = cont.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  const w = cont.clientWidth, h = cont.clientHeight;
+  canvas.width  = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width  = w + 'px';
+  canvas.style.height = h + 'px';
   render();
 }
 
@@ -2304,7 +2308,7 @@ function _tyToLat(ty, z) {
 
 function drawTileLayer() {
   if (!S.transform) return;
-  const W = canvas.width, H = canvas.height;
+  const W = canvas.clientWidth, H = canvas.clientHeight;
 
   // Geographic centre of the canvas viewport
   const center = canvasToCoord(W / 2, H / 2);
@@ -2379,7 +2383,10 @@ function drawTileLayer() {
 }
 
 function render() {
+  const dpr = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.scale(dpr, dpr);
 
   // Tile base map — drawn in screen space before any transform
   if (S.layers.tiles) drawTileLayer();
@@ -2418,6 +2425,8 @@ function render() {
   // Calibration warn
   const warn = document.getElementById('calib-warn');
   warn.style.display = (S.baseImage && !S.transform) ? 'block' : 'none';
+
+  ctx.restore(); // restore DPR scale
 }
 
 function drawPolyline(pts, style) {
@@ -4944,8 +4953,8 @@ AOO:031200N,1038000E
 // ═══════════════════════════════════════════════════════════════════════════
 function initDefaultTransform() {
   if (S.transform) return; // user has calibrated — don't overwrite
-  const W = canvas.width  || 1000;
-  const H = canvas.height || 700;
+  const W = canvas.clientWidth  || 1000;
+  const H = canvas.clientHeight || 700;
   // Center: 1°17′N  103°50′E,  scale 2.118e-3 °/px
   const cLon = 103 + 50 / 60;   // 103.8333…°E
   const cLat = 1   + 17 / 60;   // 1.2833…°N
