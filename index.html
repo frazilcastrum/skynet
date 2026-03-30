@@ -143,47 +143,40 @@ body {
 
 /* ── Sidebar (left) ───────────────────────────────────────────────────────── */
 #sidebar {
-  width: var(--sidebar-w);
+  width: calc(var(--sidebar-w) + 36px);
   flex-shrink: 0;
   background: var(--bg-panel);
   border-right: 1px solid var(--border);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   overflow: hidden;
   transition: width 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-#sidebar.collapsed { width: 24px; }
+#sidebar.collapsed { width: 36px; }
 #sidebar-inner {
-  flex: 1;
+  flex: 1 1 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 10px 8px;
-  min-width: var(--sidebar-w);
   transition: opacity 0.18s ease;
 }
 #sidebar.collapsed #sidebar-inner { opacity: 0; pointer-events: none; }
 #sidebar-toggle {
-  height: 32px;
+  width: 36px;
+  flex-shrink: 0;
+  align-self: stretch;
   border: none;
-  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
   background: var(--bg-card);
   color: var(--text-3);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 16px;
   cursor: pointer;
-  flex-shrink: 0;
-  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
   transition: color .15s, background .15s;
-  white-space: nowrap;
-  overflow: hidden;
-  letter-spacing: .03em;
 }
 #sidebar-toggle:hover { color: var(--text-1); background: var(--bg-hover); }
-#sidebar.collapsed #sidebar-toggle { font-size: 14px; letter-spacing: 0; }
 
 .panel-section { margin-bottom: 14px; }
 .panel-section-title {
@@ -305,16 +298,16 @@ body {
 
 /* ── Mission Panel (right) ────────────────────────────────────────────────── */
 #right-panel {
-  width: 300px;
+  width: 336px;
   flex-shrink: 0;
   background: var(--bg-panel);
   border-left: 1px solid var(--border);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   overflow: hidden;
   transition: width 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-#right-panel.collapsed { width: 24px; }
+#right-panel.collapsed { width: 36px; }
 #right-panel-inner {
   min-width: 300px;
   flex: 1;
@@ -324,44 +317,22 @@ body {
   transition: opacity 0.18s ease;
 }
 #right-panel.collapsed #right-panel-inner { opacity: 0; pointer-events: none; }
-#rp-collapse-btn {
-  width: 100%;
-  height: 32px;
+#rp-toggle-btn {
+  width: 36px;
+  flex-shrink: 0;
+  align-self: stretch;
   border: none;
-  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   background: var(--bg-card);
   color: var(--text-3);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding: 0 10px;
-  gap: 5px;
-  transition: color .15s, background .15s;
-  white-space: nowrap;
-  overflow: hidden;
-  letter-spacing: .03em;
-  flex-shrink: 0;
-}
-#rp-collapse-btn:hover { color: var(--text-1); background: var(--bg-hover); }
-#rp-expand-btn {
-  display: none;
-  width: 24px;
-  flex: 1;
-  border: none;
-  background: transparent;
-  color: var(--text-3);
-  font-size: 14px;
-  cursor: pointer;
-  align-items: center;
   justify-content: center;
-  transition: color .15s;
+  transition: color .15s, background .15s;
 }
-#rp-expand-btn:hover { color: var(--accent); }
-#right-panel.collapsed #rp-collapse-btn { display: none; }
-#right-panel.collapsed #rp-expand-btn { display: flex; }
+#rp-toggle-btn:hover { color: var(--text-1); background: var(--bg-hover); }
 #right-panel-tabs {
   display: flex;
   border-bottom: 1px solid var(--border);
@@ -1345,7 +1316,7 @@ body {
         </div>
       </div>
     </div>
-    <button id="sidebar-toggle" onclick="toggleSidebar()">◂ Collapse</button>
+    <button id="sidebar-toggle" onclick="toggleSidebar()" title="Collapse layers panel">◀</button>
   </aside>
 
   <!-- Canvas -->
@@ -1399,8 +1370,7 @@ body {
 
   <!-- Right Panel (tabbed) -->
   <aside id="right-panel">
-    <button id="rp-collapse-btn" onclick="toggleRightPanel()" title="Collapse panel">▶ Collapse</button>
-    <button id="rp-expand-btn"   onclick="toggleRightPanel()" title="Expand panel">◀</button>
+    <button id="rp-toggle-btn" onclick="toggleRightPanel()" title="Collapse panel">▶</button>
     <div id="right-panel-inner">
     <div id="right-panel-tabs">
       <button class="rpanel-tab active" data-rt="missions" onclick="switchRightPanel('missions')">Missions</button>
@@ -4499,13 +4469,18 @@ function toggleSidebar() {
   const toggle = document.getElementById('sidebar-toggle');
   sb.classList.toggle('collapsed');
   const isCollapsed = sb.classList.contains('collapsed');
-  toggle.textContent = isCollapsed ? '▶' : '◂ Collapse';
+  toggle.textContent = isCollapsed ? '▶' : '◀';
   toggle.title = isCollapsed ? 'Expand layers panel' : 'Collapse layers panel';
+  setTimeout(() => resizeCanvas(), 300);
 }
 
 function toggleRightPanel() {
   const rp = document.getElementById('right-panel');
+  const btn = document.getElementById('rp-toggle-btn');
   rp.classList.toggle('collapsed');
+  const isCollapsed = rp.classList.contains('collapsed');
+  btn.textContent = isCollapsed ? '◀' : '▶';
+  btn.title = isCollapsed ? 'Expand panel' : 'Collapse panel';
   setTimeout(() => { resizeCanvas(); }, 300);
 }
 
@@ -5207,6 +5182,8 @@ function buildLayerSubItems() {
 function init() {
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
+  // Keep canvas correctly sized whenever the panel layout changes
+  new ResizeObserver(() => resizeCanvas()).observe(document.getElementById('canvas-container'));
   setupLayerToggles();
   buildLayerSubItems();
   loadFromStorage();
