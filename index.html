@@ -143,7 +143,7 @@ body {
 
 /* ── Sidebar (left) ───────────────────────────────────────────────────────── */
 #sidebar {
-  width: calc(var(--sidebar-w) + 36px);
+  width: calc(var(--sidebar-w) + 37px);
   flex-shrink: 0;
   background: var(--bg-panel);
   border-right: 1px solid var(--border);
@@ -152,15 +152,16 @@ body {
   overflow: hidden;
   transition: width 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-#sidebar.collapsed { width: 36px; }
+#sidebar.collapsed { width: 37px; }
 #sidebar-inner {
   flex: 1 1 0;
+  min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 10px 8px;
   transition: opacity 0.18s ease;
 }
-#sidebar.collapsed #sidebar-inner { opacity: 0; pointer-events: none; }
+#sidebar.collapsed #sidebar-inner { opacity: 0; pointer-events: none; padding: 0; }
 #sidebar-toggle {
   width: 36px;
   flex-shrink: 0;
@@ -298,7 +299,7 @@ body {
 
 /* ── Mission Panel (right) ────────────────────────────────────────────────── */
 #right-panel {
-  width: 336px;
+  width: 337px;
   flex-shrink: 0;
   background: var(--bg-panel);
   border-left: 1px solid var(--border);
@@ -307,7 +308,7 @@ body {
   overflow: hidden;
   transition: width 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-#right-panel.collapsed { width: 36px; }
+#right-panel.collapsed { width: 37px; }
 #right-panel-inner {
   min-width: 300px;
   flex: 1;
