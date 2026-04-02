@@ -294,6 +294,32 @@ html, body {
 .csv-hint     { color: #4a6a7a; font-style: italic; }
 .csv-sep      { color: #1a3550; }
 
+/* ─── ATO Import ─────────────────────────────────────────────────────── */
+#ato-import-card textarea {
+  width: 100%; box-sizing: border-box;
+  background: #f8fbfd; border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; font-family: 'IBM Plex Mono','Consolas',monospace;
+  font-size: 11px; color: var(--navy); resize: vertical;
+  margin-bottom: 8px; line-height: 1.5;
+}
+#ato-import-card textarea:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(20,189,235,.15); }
+#ato-modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 300;
+  background: rgba(3,43,67,.45); align-items: center; justify-content: center;
+}
+#ato-modal-overlay.open { display: flex; }
+#ato-modal {
+  background: #fff; border-radius: 12px; padding: 24px 26px;
+  min-width: 320px; max-width: 420px; width: 100%;
+  box-shadow: 0 8px 40px rgba(3,43,67,.22);
+}
+#ato-modal h3 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
+#ato-modal-summary { font-size: 12px; color: var(--grey); margin-bottom: 14px; line-height: 1.7; }
+#ato-modal-summary strong { color: var(--navy); }
+#ato-modal-phase-label { font-size: 11px; font-weight: 600; color: var(--grey); margin-bottom: 4px; }
+#ato-modal-phase { width: 100%; box-sizing: border-box; }
+#ato-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
 /* ─── Waypoint DB Panel ──────────────────────────────────────────────── */
 .wdb-overlay {
   position: fixed; inset: 0; z-index: 190;
@@ -646,7 +672,28 @@ html, body {
       <button class="btn primary" onclick="addMission()">＋ Add Mission</button>
     </div>
 
+    <!-- ATO Import -->
+    <div class="card" id="ato-import-card">
+      <div class="section-header">ATO Import</div>
+      <textarea id="ato-textarea" rows="9" placeholder="Paste ATO text here…"></textarea>
+      <button class="btn primary" style="width:100%" onclick="parseATO()">Parse ATO</button>
+    </div>
+
   </div><!-- /left-col -->
+
+  <!-- ATO summary / phase modal -->
+  <div id="ato-modal-overlay">
+    <div id="ato-modal">
+      <h3>ATO Parsed</h3>
+      <div id="ato-modal-summary"></div>
+      <div id="ato-modal-phase-label">Phase</div>
+      <input class="input" id="ato-modal-phase" placeholder="e.g. Phase 1" autocomplete="off">
+      <div id="ato-modal-actions">
+        <button class="btn" onclick="closeAtoModal()">Cancel</button>
+        <button class="btn primary" onclick="importATOMissions()">Import</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ── RIGHT COLUMN ── -->
   <div class="right-col">
@@ -731,13 +778,15 @@ function uid() { return Math.random().toString(36).slice(2, 9); }
 const BUILTIN_WAYPOINTS = [
   // Singapore
   { code:'WSSS', name:'Singapore Changi Airport',              lat:'012133.16N', lon:'1035921.57E' },
+  { code:'WSAC', name:'Changi Air Base (East)',                lat:'012044N',    lon:'1040035E'    },
   { code:'WSSL', name:'Singapore Seletar Airport',             lat:'012540N',    lon:'1035228E'    },
   { code:'WSAP', name:'Paya Lebar Air Base',                   lat:'012114N',    lon:'1035414E'    },
   { code:'WSAT', name:'Tengah Air Base',                       lat:'012145N',    lon:'1034145E'    },
   // Malaysia
   { code:'WMKJ', name:'Johor Bahru Senai Airport',             lat:'013803N',    lon:'1034223E'    },
   { code:'WMKK', name:'Kuala Lumpur KLIA',                     lat:'025432N',    lon:'1014225E'    },
-  { code:'WMKF', name:'Subang Sultan Abdul Aziz Shah Airport', lat:'030630N',    lon:'1013325E'    },
+  { code:'WMSA', name:'Subang Sultan Abdul Aziz Shah Airport', lat:'030630N',    lon:'1013325E'    },
+  { code:'WMGK', name:'Gong Kedak Air Base',                   lat:'052412N',    lon:'1021648E'    },
   { code:'WMKB', name:'Butterworth Air Base',                  lat:'051845N',    lon:'1001823E'    },
   { code:'WMBT', name:'Kota Bharu Airport',                    lat:'060938N',    lon:'1021645E'    },
   { code:'WMKC', name:'Kota Bharu Air Base',                   lat:'060947N',    lon:'1021705E'    },
@@ -766,6 +815,7 @@ const BUILTIN_WAYPOINTS = [
   { code:'VTK',   name:'Tekong DVOR/DME',                      lat:'012455N',    lon:'1040120E'    },
   { code:'VJB',   name:'Johor Bahru DVOR/DME',                 lat:'013950N',    lon:'1033939E'    },
   { code:'HOSBA', name:'HOSBA Waypoint',                       lat:'011948N',    lon:'1042417E'    },
+  { code:'NEXUS', name:'NEXUS',                                lat:'012048N',    lon:'1042424E'    },
   { code:'PU',    name:'Papa Uniform DVOR/DME',                lat:'012524N',    lon:'1035600E'    },
 ];
 
@@ -1077,6 +1127,136 @@ function attachRouteListeners(el, item) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// ATO PARSER
+// ═══════════════════════════════════════════════════════════════════════
+
+let _atoParsed = []; // holds parsed mission objects until user confirms
+
+// Look up a code in the combined waypoint DB (case-insensitive)
+function wdbLookup(code) {
+  if (!code) return null;
+  const upper = code.trim().toUpperCase();
+  return allWaypoints().find(w => w.code.toUpperCase() === upper) || null;
+}
+
+function zuluToLocal8(tok) {
+  // Accept "290015ZMAR" or bare "0015" — extracts HHMM, adds 8 h
+  const m = tok.match(/(\d{4})Z/);
+  if (!m) return tok;
+  const hhmm = m[1];
+  const h = parseInt(hhmm.slice(0, 2)), min = parseInt(hhmm.slice(2, 4));
+  const total = ((h * 60 + min + 480) % 1440);
+  return String(Math.floor(total / 60)).padStart(2, '0') + String(total % 60).padStart(2, '0');
+}
+
+function parseATO() {
+  const raw = document.getElementById('ato-textarea').value.trim();
+  if (!raw) { alert('Paste ATO text first.'); return; }
+
+  // Split into blocks — each block starts with a MSNACFT line
+  const allLines = raw.split(/\r?\n/);
+  const blocks = [];
+  let cur = null;
+  for (const line of allLines) {
+    const t = line.trim();
+    if (t.startsWith('MSNACFT')) { cur = [t]; blocks.push(cur); }
+    else if (cur) cur.push(t);
+  }
+
+  if (blocks.length === 0) { alert('No MSNACFT records found.'); return; }
+
+  _atoParsed = blocks.map(block => {
+    const msnLine  = block.find(l => l.startsWith('MSNACFT')) || '';
+    const datLine  = block.find(l => l.startsWith('AMSNDAT')) || '';
+    const locLines = block.filter(l => l.startsWith('AMSNLOC'));
+
+    // --- MSNACFT ---
+    const mp = msnLine.split('/');
+    const acftCount = parseInt(mp[1]) || 1;
+    const typeField = mp[2] || '';
+    const acftType  = typeField.includes(':') ? typeField.split(':').slice(1).join(':') : typeField;
+    const callsign  = mp[3] || '';
+    const mode3raw  = mp[8] || '';
+    // Leading digit indicates the mode (3 = Mode 3); remaining 4 digits are the squawk code
+    const mode3     = mode3raw.startsWith('3') && mode3raw.length === 5 ? mode3raw.slice(1) : mode3raw;
+
+    // --- AMSNDAT ---
+    const dp = datLine.split('/');
+    const missionNumber = dp[1] || '';
+    const missionType   = dp[5] || '';
+    const deploc = (dp[8] || '').match(/DEPLOC:(\S+)/);
+    const arrloc = (dp[9] || '').match(/ARRLOC:(\S+)/);
+    const depICAO = deploc ? deploc[1].replace(/\/+$/, '') : '';
+    const arrICAO = arrloc ? arrloc[1].replace(/\/+$/, '') : '';
+
+    // --- AMSNLOC → waypoints + ETD/ETA ---
+    const waypoints = locLines.map(l => {
+      const lp       = l.split('/');
+      const totEarly = zuluToLocal8(lp[1] || '');
+      const totLate  = zuluToLocal8(lp[2] || '');
+      const label    = (lp[3] || '').replace(/\/+$/, '');
+      const wdb      = wdbLookup(label);
+      return { label, totEarly, totLate, lat: wdb ? wdb.lat : '', lon: wdb ? wdb.lon : '' };
+    });
+    const etd = locLines.length ? zuluToLocal8(locLines[0].split('/')[1] || '') : '';
+    const eta = locLines.length ? zuluToLocal8(locLines[locLines.length - 1].split('/')[1] || '') : '';
+
+    // Prepend dep aerodrome, append arr aerodrome as route points
+    const depWdb = wdbLookup(depICAO);
+    const arrWdb = wdbLookup(arrICAO);
+    if (depICAO) waypoints.unshift({ label: depICAO, totEarly: etd, totLate: '', lat: depWdb ? depWdb.lat : '', lon: depWdb ? depWdb.lon : '' });
+    if (arrICAO) waypoints.push   ({ label: arrICAO, totEarly: eta, totLate: '', lat: arrWdb ? arrWdb.lat : '', lon: arrWdb ? arrWdb.lon : '' });
+
+    return { callsign, acftType, acftCount, depICAO, etd, arrICAO, eta,
+             mode3, missionNumber, missionType, waypoints };
+  });
+
+  // Build summary
+  const typeCounts = {};
+  _atoParsed.forEach(m => { typeCounts[m.missionType || '?'] = (typeCounts[m.missionType || '?'] || 0) + 1; });
+  const typeStr = Object.entries(typeCounts).map(([t, n]) => `<strong>${t}</strong>×${n}`).join('  ');
+  document.getElementById('ato-modal-summary').innerHTML =
+    `<strong>${_atoParsed.length}</strong> mission${_atoParsed.length !== 1 ? 's' : ''} detected<br>Types: ${typeStr}`;
+  document.getElementById('ato-modal-phase').value = '';
+  document.getElementById('ato-modal-overlay').classList.add('open');
+}
+
+function closeAtoModal() {
+  document.getElementById('ato-modal-overlay').classList.remove('open');
+  _atoParsed = [];
+}
+
+function importATOMissions() {
+  const phase = document.getElementById('ato-modal-phase').value.trim();
+  // Remove the single empty default mission created on page load
+  if (S.missions.length === 1) {
+    const def = S.missions[0];
+    if (!def.callsign && !def.acftType && !def.depICAO && !def.arrICAO && def.route.length === 0) {
+      S.missions.splice(0, 1);
+    }
+  }
+  const COLORS = ['#14BDEB','#f59e0b','#10b981','#8b5cf6','#ef4444','#06b6d4','#f97316','#84cc16'];
+  _atoParsed.forEach((parsed, i) => {
+    const color = COLORS[S.missions.length % COLORS.length];
+    const m = {
+      id: uid(), callsign: parsed.callsign, acftType: parsed.acftType,
+      acftCount: parsed.acftCount, depICAO: parsed.depICAO, etd: parsed.etd,
+      arrICAO: parsed.arrICAO, eta: parsed.eta, color,
+      mode3: parsed.mode3, phase, missionType: parsed.missionType,
+      missionNumber: parsed.missionNumber,
+      route: parsed.waypoints.map(w => ({ id: uid(), type: 'point', label: w.label,
+        lat: w.lat || '', lon: w.lon || '', totEarly: w.totEarly, totLate: w.totLate })),
+    };
+    S.missions.push(m);
+  });
+  closeAtoModal();
+  S.active = S.missions.length - 1;
+  reloadFormInputs();
+  renderAll();
+  updatePreview();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // CSV GENERATION
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -1085,7 +1265,8 @@ function tr(v) { return (v || '').trim(); }
 function missionToLines(m) {
   const lines = [];
   lines.push([tr(m.callsign), tr(m.acftType), tr(String(m.acftCount)),
-    tr(m.depICAO), tr(m.etd), tr(m.arrICAO), tr(m.eta), tr(m.color)].join(','));
+    tr(m.depICAO), tr(m.etd), tr(m.arrICAO), tr(m.eta), tr(m.color),
+    tr(m.mode3 || ''), tr(m.phase || ''), tr(m.missionType || ''), tr(m.missionNumber || '')].join(','));
   m.route.forEach(item => {
     if (item.type === 'point') {
       const parts = [tr(item.label), tr(item.lat), tr(item.lon), tr(item.totEarly)];
