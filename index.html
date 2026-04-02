@@ -1088,6 +1088,31 @@ body {
   overflow: hidden;
 }
 #mission-info-panel.hidden { display: none; }
+
+/* ── ATO Panel (bottom-left) ──────────────────────────────────────────── */
+#ato-panel {
+  position: absolute;
+  bottom: 40px;
+  left: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px 12px 14px;
+  min-width: 190px;
+  box-shadow: var(--shadow-md);
+  z-index: 120;
+  font-size: 12px;
+}
+#ato-panel.hidden { display: none; }
+#ato-panel-color  { width: 3px; position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--radius-md) 0 0 var(--radius-md); }
+#ato-panel-phase  { font-size:10px; font-weight:700; color:var(--text-3); text-transform:uppercase; letter-spacing:.07em; margin-bottom:5px; padding-left:8px; }
+#ato-panel-callsign { font-size:16px; font-weight:700; color:var(--text-1); margin-bottom:1px; padding-left:8px; }
+#ato-panel-msn    { font-size:11px; color:var(--text-3); margin-bottom:8px; padding-left:8px; }
+#ato-panel-acft   { font-size:13px; font-weight:600; color:var(--text-2); margin-bottom:4px; padding-left:8px; }
+#ato-panel-etd    { font-size:12px; color:var(--text-2); margin-bottom:4px; padding-left:8px; }
+#ato-panel-mode3  { font-size:11px; color:var(--text-3); font-family:'IBM Plex Mono','Consolas',monospace; padding-left:8px; }
+#ato-panel-close  { position:absolute; top:6px; right:8px; border:none; background:none; color:var(--text-3); cursor:pointer; font-size:13px; line-height:1; padding:2px 4px; border-radius:4px; }
+#ato-panel-close:hover { color:var(--text-1); background:var(--bg-hover); }
 #mip-header {
   display: flex;
   align-items: center;
@@ -1366,6 +1391,18 @@ body {
         <button id="aip-close" onclick="closeAssetInfoPanel()">✕</button>
       </div>
       <div id="aip-body"></div>
+    </div>
+
+    <!-- ATO detail panel — bottom-left, shown when an ATO-imported mission is selected -->
+    <div id="ato-panel" class="hidden">
+      <div id="ato-panel-color"></div>
+      <button id="ato-panel-close" onclick="closeAtoPanel()">✕</button>
+      <div id="ato-panel-phase"></div>
+      <div id="ato-panel-callsign"></div>
+      <div id="ato-panel-msn"></div>
+      <div id="ato-panel-acft"></div>
+      <div id="ato-panel-etd"></div>
+      <div id="ato-panel-mode3"></div>
     </div>
   </div>
 
@@ -4409,7 +4446,9 @@ function updateMissionCards() {
     card.addEventListener('click', e => {
       if (e.target.classList.contains('btn-xs')) return;
       if (S.presentationMode) { openPresentationFocus(m); return; }
-      S.selectedMission = S.selectedMission === m.id ? null : m.id;
+      const wasSelected = S.selectedMission === m.id;
+      S.selectedMission = wasSelected ? null : m.id;
+      if (wasSelected) { closeAtoPanel(); } else { showAtoPanel(m); }
       updateMissionCards(); render();
     });
     list.appendChild(card);
@@ -4432,6 +4471,7 @@ function flushMissions() {
   S.visibleMissions = new Set();
   S.selectedMission = null;
   if (S.presentationFocus) closePresentationFocus();
+  closeAtoPanel();
   saveToStorage();
   updateMissionCards();
   render();
@@ -4950,6 +4990,25 @@ function closeAssetInfoPanel() {
   document.getElementById('asset-info-panel').classList.remove('visible');
 }
 
+// ── ATO Panel ────────────────────────────────────────────────────────────
+function showAtoPanel(m) {
+  if (!m.mode3 && !m.phase && !m.missionNumber && !m.missionType) return;
+  const panel = document.getElementById('ato-panel');
+  document.getElementById('ato-panel-color').style.background = m.color || 'transparent';
+  document.getElementById('ato-panel-phase').textContent    = m.phase || '';
+  document.getElementById('ato-panel-callsign').textContent = m.callsign || '';
+  const msnParts = [m.missionNumber ? 'MSN ' + m.missionNumber : '', m.missionType].filter(Boolean);
+  document.getElementById('ato-panel-msn').textContent    = msnParts.join('  ');
+  document.getElementById('ato-panel-acft').textContent   = m.acftCount + '× ' + (m.acftType || '');
+  document.getElementById('ato-panel-etd').textContent    = [m.etd, m.depICAO].filter(Boolean).join('  ');
+  document.getElementById('ato-panel-mode3').textContent  = m.mode3 ? 'MODE 3: ' + m.mode3 : '';
+  panel.classList.remove('hidden');
+}
+
+function closeAtoPanel() {
+  document.getElementById('ato-panel').classList.add('hidden');
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  CSV IMPORT
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4972,13 +5031,17 @@ function importMissionsCSV(e) {
         const m = {
           id: uid(),
           callsign,
-          acftType:  parts[1]?.trim() || '',
-          acftCount: parseInt(parts[2]?.trim()) || 1,
-          depICAO:   parts[3]?.trim().toUpperCase() || '',
-          etd:       parts[4]?.trim() || '',
-          arrICAO:   parts[5]?.trim().toUpperCase() || '',
-          eta:       parts[6]?.trim() || '',
-          color:     parts[7]?.trim() || '#14BDEB',
+          acftType:      parts[1]?.trim() || '',
+          acftCount:     parseInt(parts[2]?.trim()) || 1,
+          depICAO:       parts[3]?.trim().toUpperCase() || '',
+          etd:           parts[4]?.trim() || '',
+          arrICAO:       parts[5]?.trim().toUpperCase() || '',
+          eta:           parts[6]?.trim() || '',
+          color:         parts[7]?.trim() || '#14BDEB',
+          mode3:         parts[8]?.trim()  || '',
+          phase:         parts[9]?.trim()  || '',
+          missionType:   parts[10]?.trim() || '',
+          missionNumber: parts[11]?.trim() || '',
           waypoints: [],
           datumPoints: [],
           aoo: null,
