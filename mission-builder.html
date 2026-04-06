@@ -310,12 +310,24 @@ html, body {
 #ato-modal-overlay.open { display: flex; }
 #ato-modal {
   background: #fff; border-radius: 12px; padding: 24px 26px;
-  min-width: 320px; max-width: 420px; width: 100%;
+  min-width: 340px; max-width: 480px; width: 100%;
   box-shadow: 0 8px 40px rgba(3,43,67,.22);
 }
 #ato-modal h3 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
-#ato-modal-summary { font-size: 12px; color: var(--grey); margin-bottom: 14px; line-height: 1.7; }
+#ato-modal-summary { font-size: 12px; color: var(--grey); margin-bottom: 14px; }
 #ato-modal-summary strong { color: var(--navy); }
+.ato-total    { font-size:12px; color:var(--grey); margin-bottom:10px; }
+.ato-total strong { color:var(--navy); }
+.ato-country-block { margin-bottom:8px; }
+.ato-country-block:last-child { margin-bottom:0; }
+.ato-country-name { font-size:12px; font-weight:700; color:var(--navy); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border); }
+.ato-sqn-row  { display:flex; justify-content:space-between; align-items:baseline; margin-top:4px; }
+.ato-sqn-name { font-size:12px; font-weight:600; color:var(--grey); }
+.ato-sqn-count { font-size:11px; color:#6b8aa0; white-space:nowrap; margin-left:8px; }
+.ato-types-row { font-size:11px; color:#6b8aa0; margin-top:1px; padding-left:2px; }
+#ato-modal-warnings { margin-top:12px; padding:10px 12px; background:#fff8f0; border:1px solid #f59e0b; border-radius:8px; }
+.ato-warn-title { font-size:11px; font-weight:700; color:#b45309; margin-bottom:6px; }
+.ato-warn-item { font-size:11px; color:#92400e; margin-bottom:3px; line-height:1.4; }
 #ato-modal-phase-label { font-size: 11px; font-weight: 600; color: var(--grey); margin-bottom: 4px; }
 #ato-modal-phase { width: 100%; box-sizing: border-box; }
 #ato-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
@@ -645,6 +657,19 @@ html, body {
           </div>
         </div>
 
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label class="form-label">Mission Type</label>
+            <input class="input" id="missionType" type="text" placeholder="e.g. DEF"
+              oninput="M().missionType=this.value.trim();updatePreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mode 3</label>
+            <input class="input mono" id="mode3Input" type="text" placeholder="e.g. 1881"
+              oninput="M().mode3=this.value.trim();updatePreview()">
+          </div>
+        </div>
+
         <div class="form-group">
           <label class="form-label">Mission Colour</label>
           <div class="swatch-row" id="swatch-row"></div>
@@ -665,6 +690,14 @@ html, body {
       <div class="route-list" id="route-list">
         <p class="empty-hint" id="route-empty">No route points yet — add a Point or AO</p>
       </div>
+    </div>
+
+    <!-- Card 3: AMPN Notes -->
+    <div class="card">
+      <div class="section-header">Notes (AMPN)</div>
+      <textarea id="ampn-textarea" placeholder="Amplifying notes…"
+        style="width:100%;box-sizing:border-box;resize:none;overflow:hidden;min-height:60px"
+        oninput="M().ampn=this.value;autoGrow(this);updatePreview()"></textarea>
     </div>
 
     <!-- Add Mission -->
@@ -848,6 +881,7 @@ function newMission(colorIdx) {
     depICAO: '', etd: '', arrICAO: '', eta: '',
     color: COLORS[colorIdx % COLORS.length],
     route: [],
+    refuel: [], arinfo: null, aarEtd: '', aarEta: '', arct: '',
   };
 }
 
@@ -905,6 +939,8 @@ function setActiveMission(idx) {
   reloadFormInputs(); renderAll(); updatePreview();
 }
 
+function autoGrow(el) { el.style.height = 'auto'; el.style.height = (el.scrollHeight + 4) + 'px'; }
+
 function reloadFormInputs() {
   const m = M();
   document.getElementById('callsign').value  = m.callsign;
@@ -912,8 +948,13 @@ function reloadFormInputs() {
   document.getElementById('acftCount').value = m.acftCount;
   document.getElementById('depICAO').value   = m.depICAO;
   document.getElementById('etd').value       = m.etd;
-  document.getElementById('arrICAO').value   = m.arrICAO;
-  document.getElementById('eta').value       = m.eta;
+  document.getElementById('arrICAO').value          = m.arrICAO;
+  document.getElementById('eta').value              = m.eta;
+  document.getElementById('missionType').value  = m.missionType || '';
+  document.getElementById('mode3Input').value   = m.mode3       || '';
+  const ampnEl = document.getElementById('ampn-textarea');
+  ampnEl.value = m.ampn || '';
+  autoGrow(ampnEl);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1149,39 +1190,172 @@ function zuluToLocal8(tok) {
   return String(Math.floor(total / 60)).padStart(2, '0') + String(total % 60).padStart(2, '0');
 }
 
+// Convert DDHHMMZ[MON] or plain HHMM (Zulu) to HHMMH local (+8)
+function zuluAARToLocal8(tok) {
+  if (!tok) return '';
+  // DDHHMMZ[...]: extract the HHMM after the 2-digit day prefix
+  const m7 = tok.match(/^\d{2}(\d{4})Z/);
+  if (m7) {
+    const h = parseInt(m7[1].slice(0,2)), min = parseInt(m7[1].slice(2,4));
+    const t = ((h*60 + min + 480) % 1440);
+    return String(Math.floor(t/60)).padStart(2,'0') + String(t%60).padStart(2,'0') + 'H';
+  }
+  // Plain HHMM (e.g. from ARCT field)
+  const m4 = tok.match(/^(\d{4})$/);
+  if (m4) {
+    const h = parseInt(tok.slice(0,2)), min = parseInt(tok.slice(2,4));
+    const t = ((h*60 + min + 480) % 1440);
+    return String(Math.floor(t/60)).padStart(2,'0') + String(t%60).padStart(2,'0') + 'H';
+  }
+  return tok;
+}
+
+// Parse AAR-related fields out of a mission's AMPN text
+function parseAmpnAar(ampn) {
+  if (!ampn) return { etd:'', eta:'', arct:'' };
+  const etdM  = ampn.match(/ETD\s+(\d{6,9}Z\w*)/i);
+  const etaM  = ampn.match(/ETA\s+(\d{6,9}Z\w*)/i);
+  const arctM = ampn.match(/ARCT\s+(\d{4})-(\d{4})/i);
+  return {
+    etd:  etdM  ? zuluAARToLocal8(etdM[1])  : '',
+    eta:  etaM  ? zuluAARToLocal8(etaM[1])  : '',
+    arct: arctM ? zuluAARToLocal8(arctM[1]) + '-' + zuluAARToLocal8(arctM[2]) : '',
+  };
+}
+
 function parseATO() {
   const raw = document.getElementById('ato-textarea').value.trim();
   if (!raw) { alert('Paste ATO text first.'); return; }
 
-  // Split into blocks — each block starts with a MSNACFT line
+  const COUNTRY_MAP = { AS: 'Australia', MY: 'Malaysia', SN: 'Singapore', UK: 'United Kingdom' };
+  const SERVICE_MAP = { F: 'Air Force', N: 'Navy' };
+
+  // Parse line-by-line into logical records; AMPN blocks span multiple lines until //
   const allLines = raw.split(/\r?\n/);
-  const blocks = [];
-  let cur = null;
-  for (const line of allLines) {
-    const t = line.trim();
-    if (t.startsWith('MSNACFT')) { cur = [t]; blocks.push(cur); }
-    else if (cur) cur.push(t);
+  // Build logical records; AMPN blocks collect across multiple lines until //
+  const records = [];
+  let i = 0;
+  while (i < allLines.length) {
+    const line = allLines[i].trim();
+    if (!line) { i++; continue; }
+
+    // 5REFUEL appears as a standalone keyword on its own line (no / suffix)
+    // followed by a header row and data rows, terminated by //
+    if (/^5REFUEL$/i.test(line)) {
+      const parts = [];
+      i++;
+      while (i < allLines.length) {
+        const next = allLines[i];
+        if (next.includes('//')) { parts.push(next.replace(/\/\/.*$/, '')); i++; break; }
+        parts.push(next);
+        i++;
+      }
+      records.push({ type: '5REFUEL', content: parts.join('\n') });
+      continue;
+    }
+
+    const kwMatch = line.match(/^([A-Z0-9]+)\//);
+    if (!kwMatch) { i++; continue; }
+    const kw = kwMatch[1];
+    if (kw === 'AMPN') {
+      let content = line.slice(kw.length + 1); // strip "AMPN/"
+      if (content.includes('//')) {
+        records.push({ type: 'AMPN', content: content.replace(/\/\/.*$/, '').trim() });
+        i++;
+      } else {
+        const parts = [content];
+        i++;
+        while (i < allLines.length) {
+          const next = allLines[i];
+          if (next.includes('//')) { parts.push(next.replace(/\/\/.*$/, '')); i++; break; }
+          parts.push(next);
+          i++;
+        }
+        records.push({ type: 'AMPN', content: parts.join('\n').trim() });
+      }
+    } else {
+      records.push({ type: kw, content: line.replace(/\/\/$/, '') });
+      i++;
+    }
   }
 
-  if (blocks.length === 0) { alert('No MSNACFT records found.'); return; }
+  // Walk records: AMSNDAT starts each mission card; AMPN/MSNACFT/AMSNLOC fill it
+  let currentCountry = '', currentService = '';
+  let currentUnit = { code: '', icao: '' };
+  const msnBlocks = [];
+  let curBlock = null;
 
-  _atoParsed = blocks.map(block => {
-    const msnLine  = block.find(l => l.startsWith('MSNACFT')) || '';
-    const datLine  = block.find(l => l.startsWith('AMSNDAT')) || '';
-    const locLines = block.filter(l => l.startsWith('AMSNLOC'));
+  for (const rec of records) {
+    switch (rec.type) {
+      case 'TSKCNTRY': {
+        const code = (rec.content.split('/')[1] || '').replace(/\/+$/, '');
+        currentCountry = COUNTRY_MAP[code] || code;
+        currentService = ''; currentUnit = { code: '', icao: '' };
+        break;
+      }
+      case 'SVCTASK': {
+        const code = (rec.content.split('/')[1] || '').replace(/\/+$/, '');
+        currentService = SERVICE_MAP[code] || code;
+        currentUnit = { code: '', icao: '' };
+        break;
+      }
+      case 'TASKUNIT': {
+        const tup = rec.content.split('/');
+        const icaoPart = tup.find(p => p.startsWith('ICAO:'));
+        currentUnit = { code: tup[1] || '', icao: icaoPart ? icaoPart.slice(5).replace(/\/+$/, '') : '' };
+        break;
+      }
+      case 'AMSNDAT': {
+        // Each AMSNDAT opens a new mission card
+        curBlock = {
+          datLine: rec.content, msnLine: '', locLines: [], ampn: '',
+          country: currentCountry, service: currentService, unit: { ...currentUnit },
+        };
+        msnBlocks.push(curBlock);
+        break;
+      }
+      case 'AMPN': {
+        if (curBlock) curBlock.ampn = rec.content;
+        break;
+      }
+      case 'MSNACFT': {
+        if (curBlock) curBlock.msnLine = rec.content;
+        break;
+      }
+      case 'AMSNLOC': {
+        if (curBlock) curBlock.locLines.push(rec.content);
+        break;
+      }
+      case '5REFUEL': {
+        if (curBlock) { if (!curBlock.refuelBlocks) curBlock.refuelBlocks = []; curBlock.refuelBlocks.push(rec.content); }
+        break;
+      }
+      case 'ARINFO': {
+        if (curBlock) curBlock.arInfoLine = rec.content;
+        break;
+      }
+    }
+  }
 
+  if (msnBlocks.length === 0) { alert('No AMSNDAT records found.'); return; }
+
+  _atoParsed = msnBlocks.map(block => {
     // --- MSNACFT ---
-    const mp = msnLine.split('/');
+    const mp = block.msnLine.split('/');
     const acftCount = parseInt(mp[1]) || 1;
     const typeField = mp[2] || '';
     const acftType  = typeField.includes(':') ? typeField.split(':').slice(1).join(':') : typeField;
     const callsign  = mp[3] || '';
     const mode3raw  = mp[8] || '';
-    // Leading digit indicates the mode (3 = Mode 3); remaining 4 digits are the squawk code
-    const mode3     = mode3raw.startsWith('3') && mode3raw.length === 5 ? mode3raw.slice(1) : mode3raw;
+    // Leading digit indicates the mode (3 = Mode 3); remaining 4 digits are the lead squawk code
+    const mode3base = mode3raw.startsWith('3') && mode3raw.length === 5 ? mode3raw.slice(1) : mode3raw;
+    // Generate sequential Mode 3 codes for every aircraft in the formation
+    const mode3 = (mode3base && acftCount > 1)
+      ? Array.from({ length: acftCount }, (_, i) => String(parseInt(mode3base, 10) + i).padStart(4, '0')).join(' / ')
+      : mode3base;
 
     // --- AMSNDAT ---
-    const dp = datLine.split('/');
+    const dp = block.datLine.split('/');
     const missionNumber = dp[1] || '';
     const missionType   = dp[5] || '';
     const deploc = (dp[8] || '').match(/DEPLOC:(\S+)/);
@@ -1190,33 +1364,121 @@ function parseATO() {
     const arrICAO = arrloc ? arrloc[1].replace(/\/+$/, '') : '';
 
     // --- AMSNLOC → waypoints + ETD/ETA ---
-    const waypoints = locLines.map(l => {
-      const lp       = l.split('/');
-      const totEarly = zuluToLocal8(lp[1] || '');
-      const totLate  = zuluToLocal8(lp[2] || '');
-      const label    = (lp[3] || '').replace(/\/+$/, '');
-      const wdb      = wdbLookup(label);
-      return { label, totEarly, totLate, lat: wdb ? wdb.lat : '', lon: wdb ? wdb.lon : '' };
+    const waypoints = block.locLines.map(l => {
+      const lp    = l.split('/');
+      const label = (lp[3] || '').replace(/\/+$/, '');
+      const wdb   = wdbLookup(label);
+      return { label, totEarly: zuluToLocal8(lp[1] || ''), totLate: zuluToLocal8(lp[2] || ''),
+               lat: wdb ? wdb.lat : '', lon: wdb ? wdb.lon : '' };
     });
-    const etd = locLines.length ? zuluToLocal8(locLines[0].split('/')[1] || '') : '';
-    const eta = locLines.length ? zuluToLocal8(locLines[locLines.length - 1].split('/')[1] || '') : '';
+    const etd = block.locLines.length ? zuluToLocal8(block.locLines[0].split('/')[1] || '') : '';
+    const eta = block.locLines.length ? zuluToLocal8(block.locLines[block.locLines.length - 1].split('/')[1] || '') : '';
 
     // Prepend dep aerodrome, append arr aerodrome as route points
-    const depWdb = wdbLookup(depICAO);
-    const arrWdb = wdbLookup(arrICAO);
+    const depWdb = wdbLookup(depICAO), arrWdb = wdbLookup(arrICAO);
     if (depICAO) waypoints.unshift({ label: depICAO, totEarly: etd, totLate: '', lat: depWdb ? depWdb.lat : '', lon: depWdb ? depWdb.lon : '' });
     if (arrICAO) waypoints.push   ({ label: arrICAO, totEarly: eta, totLate: '', lat: arrWdb ? arrWdb.lat : '', lon: arrWdb ? arrWdb.lon : '' });
 
+    // --- 5REFUEL → tanker receiver list ---
+    // Format: standalone "5REFUEL" header, then column-header row (/MSNNO/RECCS/NO/ACTYPE/OFLD/ARCT/SEQ/TYPE/ARS),
+    // then one data row per receiver: /MSNNO / CALLSIGN / COUNT / ACTYPE / OFLD / KLB / TIME / ...//
+    const refuel = [];
+    (block.refuelBlocks || []).forEach(content => {
+      content.split('\n').forEach(l => {
+        const t = l.trim();
+        if (!t.startsWith('/')) return;            // skip blank or non-data lines
+        if (/MSNNO|RECCS/i.test(t)) return;       // skip column header row
+        const parts = t.split('/').map(p => p.trim());
+        // parts[0]='' parts[1]=MSNNO parts[2]=RECCS parts[3]=NO parts[4]=ACTYPE
+        // parts[5]=OFLD  parts[6]=KLB/fuel  parts[7]=contact time (DDHHMMZ)
+        const receiverCallsign = parts[2] || '';
+        if (!receiverCallsign) return;
+        const acftTypeRaw = parts[4] || '';
+        const acftType    = acftTypeRaw.includes(':') ? acftTypeRaw.split(':').slice(1).join(':') : acftTypeRaw;
+        const contactTime = zuluAARToLocal8((parts[7] || '').replace(/\s/g, ''));
+        refuel.push({ receiverCallsign, acftCount: parseInt(parts[3]) || 1, acftType, start: contactTime, end: '' });
+      });
+    });
+
+    // --- ARINFO → receiver's tanker reference ---
+    // Format: ARINFO/<tankerCS>/<msnNo>/<3+mode3>/<NAME:TTLS>/<heightFL>/ARCT:<DDHHMMZ>/NDAR:<DDHHMMZMMM>/KLBS:<n>/-/-/OTHATC:...
+    let arinfo = null;
+    if (block.arInfoLine) {
+      const ap = block.arInfoLine.split('/').map(p => p.trim());
+      const tankerCallsign = ap[1] || '';
+      const arctMatch = (ap[6] || '').match(/ARCT:(\d{6,9}Z)/i);
+      const ndarMatch = (ap[7] || '').match(/NDAR:(\d{6,9}Z)/i);
+      arinfo = {
+        tankerCallsign,
+        start: arctMatch ? zuluAARToLocal8(arctMatch[1]) : '',
+        ndar:  ndarMatch ? zuluAARToLocal8(ndarMatch[1]) : '',
+      };
+    }
+
+    // --- AMPN AAR fields (ETD/ETA for tanker, ARCT for receiver) ---
+    const aarAmpn = parseAmpnAar(block.ampn);
+
     return { callsign, acftType, acftCount, depICAO, etd, arrICAO, eta,
-             mode3, missionNumber, missionType, waypoints };
+             mode3, missionNumber, missionType, waypoints,
+             ampn: block.ampn,
+             squadron: block.unit.code, country: block.country, service: block.service,
+             refuel, arinfo, aarEtd: aarAmpn.etd, aarEta: aarAmpn.eta, arct: aarAmpn.arct };
   });
 
-  // Build summary
-  const typeCounts = {};
-  _atoParsed.forEach(m => { typeCounts[m.missionType || '?'] = (typeCounts[m.missionType || '?'] || 0) + 1; });
-  const typeStr = Object.entries(typeCounts).map(([t, n]) => `<strong>${t}</strong>×${n}`).join('  ');
-  document.getElementById('ato-modal-summary').innerHTML =
-    `<strong>${_atoParsed.length}</strong> mission${_atoParsed.length !== 1 ? 's' : ''} detected<br>Types: ${typeStr}`;
+  // Cross-validate 5REFUEL ↔ ARINFO
+  const aarWarnings = [];
+  _atoParsed.forEach(rcvr => {
+    if (!rcvr.arinfo) return;
+    const tanker = _atoParsed.find(t => t.callsign.toUpperCase() === rcvr.arinfo.tankerCallsign.toUpperCase());
+    if (!tanker) {
+      aarWarnings.push(`${rcvr.callsign}: ARINFO references "${rcvr.arinfo.tankerCallsign}" — no matching tanker mission found.`);
+      return;
+    }
+    if (!tanker.refuel || tanker.refuel.length === 0) {
+      aarWarnings.push(`${rcvr.callsign}: ARINFO links to ${tanker.callsign} but tanker has no 5REFUEL entry.`);
+      return;
+    }
+    const rr = tanker.refuel.find(r => r.receiverCallsign.toUpperCase() === rcvr.callsign.toUpperCase());
+    if (!rr) {
+      aarWarnings.push(`${rcvr.callsign}: ARINFO links to ${tanker.callsign} but is not listed in tanker's 5REFUEL.`);
+      return;
+    }
+    if (rr.start !== rcvr.arinfo.start)
+      aarWarnings.push(`AAR timing mismatch (${tanker.callsign}↔${rcvr.callsign}): contact start — 5REFUEL: ${rr.start}, ARINFO: ${rcvr.arinfo.start}`);
+    if (rr.end !== rcvr.arinfo.end)
+      aarWarnings.push(`AAR timing mismatch (${tanker.callsign}↔${rcvr.callsign}): contact end — 5REFUEL: ${rr.end}, ARINFO: ${rcvr.arinfo.end}`);
+  });
+
+  // Build hierarchical summary: country → squadron → types
+  const tree = {};
+  _atoParsed.forEach(m => {
+    const country = m.country || 'Unknown';
+    const sqn     = m.squadron || '—';
+    const type    = m.missionType || '?';
+    if (!tree[country]) tree[country] = {};
+    if (!tree[country][sqn]) tree[country][sqn] = {};
+    tree[country][sqn][type] = (tree[country][sqn][type] || 0) + 1;
+  });
+
+  const total = _atoParsed.length;
+  let html = `<div class="ato-total"><strong>${total}</strong> mission${total !== 1 ? 's' : ''} detected</div>`;
+  for (const [country, sqns] of Object.entries(tree)) {
+    html += `<div class="ato-country-block"><div class="ato-country-name">${country}</div>`;
+    for (const [sqn, types] of Object.entries(sqns)) {
+      const sqnTotal = Object.values(types).reduce((a, b) => a + b, 0);
+      const typeStr  = Object.entries(types).map(([t, n]) => `${t} ×${n}`).join('&ensp;·&ensp;');
+      html += `<div class="ato-sqn-row">
+        <span class="ato-sqn-name">${sqn}</span>
+        <span class="ato-sqn-count">${sqnTotal} mission${sqnTotal !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="ato-types-row">${typeStr}</div>`;
+    }
+    html += `</div>`;
+  }
+  const warnHtml = aarWarnings.length
+    ? `<div id="ato-modal-warnings"><div class="ato-warn-title">⚠ AAR Discrepancies</div>${aarWarnings.map(w => `<div class="ato-warn-item">${w}</div>`).join('')}</div>`
+    : '';
+  document.getElementById('ato-modal-summary').innerHTML = html + warnHtml;
   document.getElementById('ato-modal-phase').value = '';
   document.getElementById('ato-modal-overlay').classList.add('open');
 }
@@ -1244,6 +1506,10 @@ function importATOMissions() {
       arrICAO: parsed.arrICAO, eta: parsed.eta, color,
       mode3: parsed.mode3, phase, missionType: parsed.missionType,
       missionNumber: parsed.missionNumber,
+      squadron: parsed.squadron || '', country: parsed.country || '',
+      service: parsed.service || '', ampn: parsed.ampn || '',
+      refuel: parsed.refuel || [], arinfo: parsed.arinfo || null,
+      aarEtd: parsed.aarEtd || '', aarEta: parsed.aarEta || '', arct: parsed.arct || '',
       route: parsed.waypoints.map(w => ({ id: uid(), type: 'point', label: w.label,
         lat: w.lat || '', lon: w.lon || '', totEarly: w.totEarly, totLate: w.totLate })),
     };
@@ -1261,12 +1527,25 @@ function importATOMissions() {
 // ═══════════════════════════════════════════════════════════════════════
 
 function tr(v) { return (v || '').trim(); }
+// Encode multi-line / comma-containing AMPN text for single CSV field
+function encodeAmpn(v) { return (v || '').replace(/\n/g, '\\n').replace(/,/g, '\\c'); }
+// Encode/decode refuel array  →  "RCVR|start|end;RCVR2|start|end"
+function encodeRefuel(arr) {
+  if (!arr || !arr.length) return '';
+  return arr.map(r => `${r.receiverCallsign}|${r.start}|${r.end}`).join(';');
+}
+// Encode/decode arinfo object  →  "TANKER|start|ndar"
+function encodeArinfo(obj) { return obj ? `${obj.tankerCallsign}|${obj.start||''}|${obj.ndar||''}` : ''; }
 
 function missionToLines(m) {
   const lines = [];
   lines.push([tr(m.callsign), tr(m.acftType), tr(String(m.acftCount)),
     tr(m.depICAO), tr(m.etd), tr(m.arrICAO), tr(m.eta), tr(m.color),
-    tr(m.mode3 || ''), tr(m.phase || ''), tr(m.missionType || ''), tr(m.missionNumber || '')].join(','));
+    tr(m.mode3 || ''), tr(m.phase || ''), tr(m.missionType || ''), tr(m.missionNumber || ''),
+    tr(m.squadron || ''), tr(m.country || ''), tr(m.service || ''),
+    encodeAmpn(m.ampn),
+    encodeRefuel(m.refuel), encodeArinfo(m.arinfo),
+    tr(m.aarEtd || ''), tr(m.aarEta || ''), tr(m.arct || '')].join(','));
   m.route.forEach(item => {
     if (item.type === 'point') {
       const parts = [tr(item.label), tr(item.lat), tr(item.lon), tr(item.totEarly)];
