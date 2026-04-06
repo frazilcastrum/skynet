@@ -1113,6 +1113,67 @@ body {
 #ato-panel-mode3  { font-size:11px; color:var(--text-3); font-family:'IBM Plex Mono','Consolas',monospace; padding-left:8px; }
 #ato-panel-close  { position:absolute; top:6px; right:8px; border:none; background:none; color:var(--text-3); cursor:pointer; font-size:13px; line-height:1; padding:2px 4px; border-radius:4px; }
 #ato-panel-close:hover { color:var(--text-1); background:var(--bg-hover); }
+
+/* ── AMPN Notes Panel (top-left) ─────────────────────────────────────── */
+#ampn-panel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px 12px 14px;
+  min-width: 220px;
+  max-width: 340px;
+  max-height: 340px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-md);
+  z-index: 120;
+  font-size: 12px;
+}
+#ampn-panel.hidden { display: none; }
+
+/* ── AAR Card (bottom-right) ──────────────────────────────────────────── */
+#aar-card {
+  position: absolute;
+  bottom: 40px;
+  right: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px 12px 14px;
+  min-width: 240px;
+  max-width: 340px;
+  box-shadow: var(--shadow-md);
+  z-index: 120;
+  font-size: 12px;
+}
+#aar-card.hidden { display: none; }
+#aar-card-color  { width:3px; position:absolute; left:0; top:0; bottom:0; border-radius:var(--radius-md) 0 0 var(--radius-md); }
+#aar-card-close  { position:absolute; top:6px; right:8px; border:none; background:none; color:var(--text-3); cursor:pointer; font-size:13px; line-height:1; padding:2px 4px; border-radius:4px; }
+#aar-card-close:hover { color:var(--text-1); background:var(--bg-hover); }
+#aar-card-header { font-size:10px; font-weight:700; color:var(--text-3); text-transform:uppercase; letter-spacing:.07em; margin-bottom:8px; padding-left:8px; }
+.aar-tanker-name { font-size:13px; font-weight:700; color:var(--text-1); padding-left:8px; margin-bottom:2px; }
+.aar-tanker-sub  { font-size:11px; color:var(--text-3); font-family:'IBM Plex Mono','Consolas',monospace; padding-left:8px; margin-bottom:6px; }
+.aar-divider     { height:1px; background:var(--border); margin:6px 0 8px; }
+.aar-rcvr-row    { border-radius:5px; padding:4px 0 2px; }
+.aar-rcvr-row.active {
+  background: rgba(20,189,235,.07);
+  border-left: 2px solid var(--cyan);
+  padding-left: 2px;
+}
+.aar-rcvr-row.active .aar-rcvr-name { color:var(--text-1); }
+.aar-rcvr-row.active .aar-rcvr-sub  { color:var(--text-2); }
+.aar-rcvr-name   { font-size:12px; font-weight:600; color:var(--text-2); padding-left:8px; margin-bottom:2px; }
+.aar-rcvr-sub    { font-size:11px; color:var(--text-3); font-family:'IBM Plex Mono','Consolas',monospace; padding-left:8px; margin-bottom:4px; }
+#ampn-panel-close { position:absolute; top:6px; right:8px; border:none; background:none; color:var(--text-3); cursor:pointer; font-size:13px; line-height:1; padding:2px 4px; border-radius:4px; }
+#ampn-panel-close:hover { color:var(--text-1); background:var(--bg-hover); }
+#ampn-panel-squadron { font-size:13px; font-weight:700; color:var(--text-1); padding-right:20px; margin-bottom:2px; }
+#ampn-panel-meta { font-size:11px; color:var(--text-3); margin-bottom:6px; }
+.ampn-section-label { font-size:10px; font-weight:700; color:var(--text-3); text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px; margin-top:8px; border-top:1px solid var(--border); padding-top:8px; }
+.ampn-section-label:first-of-type { margin-top:2px; border-top:none; padding-top:0; }
+.ampn-text { font-size:11px; color:var(--text-2); white-space:pre-line; line-height:1.6; }
+
 #mip-header {
   display: flex;
   align-items: center;
@@ -1403,6 +1464,25 @@ body {
       <div id="ato-panel-acft"></div>
       <div id="ato-panel-etd"></div>
       <div id="ato-panel-mode3"></div>
+    </div>
+
+    <!-- AMPN notes panel — top-left, shown when selected mission has AMPN data -->
+    <div id="ampn-panel" class="hidden">
+      <button id="ampn-panel-close" onclick="closeAtoPanel()">✕</button>
+      <div id="ampn-panel-squadron"></div>
+      <div id="ampn-panel-meta"></div>
+      <div id="ampn-msn-section" class="hidden">
+        <div class="ampn-section-label">Mission Notes</div>
+        <div id="ampn-msn-text" class="ampn-text"></div>
+      </div>
+    </div>
+
+    <!-- AAR Card — bottom-right, shown when selected mission has AAR data -->
+    <div id="aar-card" class="hidden">
+      <div id="aar-card-color"></div>
+      <button id="aar-card-close" onclick="closeAarCard()">✕</button>
+      <div id="aar-card-header"></div>
+      <div id="aar-card-body"></div>
     </div>
   </div>
 
@@ -4448,7 +4528,7 @@ function updateMissionCards() {
       if (S.presentationMode) { openPresentationFocus(m); return; }
       const wasSelected = S.selectedMission === m.id;
       S.selectedMission = wasSelected ? null : m.id;
-      if (wasSelected) { closeAtoPanel(); } else { showAtoPanel(m); }
+      if (wasSelected) { closeAtoPanel(); } else { showAtoPanel(m); showAarCard(m); }
       updateMissionCards(); render();
     });
     list.appendChild(card);
@@ -4544,6 +4624,8 @@ function openPresentationFocus(m) {
   document.getElementById('mission-info-panel').classList.add('hidden');
   populatePresentationPanel(m);
   document.getElementById('presentation-panel').classList.add('visible');
+  showAtoPanel(m);
+  showAarCard(m);
   updateMissionCards();
   render();
   // Compute fit after panel has laid out (offsetHeight reads correctly even mid-transition)
@@ -4590,6 +4672,7 @@ function closePresentationFocus() {
   S.blipTargets = [];
   S.routeFlash = null;
   document.getElementById('presentation-panel').classList.remove('visible');
+  closeAtoPanel();
   updateMissionCards();
   render();
 }
@@ -4992,7 +5075,7 @@ function closeAssetInfoPanel() {
 
 // ── ATO Panel ────────────────────────────────────────────────────────────
 function showAtoPanel(m) {
-  if (!m.mode3 && !m.phase && !m.missionNumber && !m.missionType) return;
+  if (!m.mode3 && !m.phase && !m.missionNumber && !m.missionType && !m.squadron && !m.ampn) return;
   const panel = document.getElementById('ato-panel');
   document.getElementById('ato-panel-color').style.background = m.color || 'transparent';
   document.getElementById('ato-panel-phase').textContent    = m.phase || '';
@@ -5003,15 +5086,102 @@ function showAtoPanel(m) {
   document.getElementById('ato-panel-etd').textContent    = [m.etd, m.depICAO].filter(Boolean).join('  ');
   document.getElementById('ato-panel-mode3').textContent  = m.mode3 ? 'MODE 3: ' + m.mode3 : '';
   panel.classList.remove('hidden');
+
+  // AMPN notes panel
+  const ampnPanel = document.getElementById('ampn-panel');
+  const hasAmpn = !!(m.squadron || m.ampn);
+  ampnPanel.classList.toggle('hidden', !hasAmpn);
+  if (hasAmpn) {
+    document.getElementById('ampn-panel-squadron').textContent = m.squadron || '';
+    document.getElementById('ampn-panel-meta').textContent = [m.country, m.service].filter(Boolean).join(' · ');
+    const msnSec = document.getElementById('ampn-msn-section');
+    document.getElementById('ampn-msn-text').textContent = m.ampn || '';
+    msnSec.classList.toggle('hidden', !m.ampn);
+  }
 }
 
 function closeAtoPanel() {
   document.getElementById('ato-panel').classList.add('hidden');
+  document.getElementById('ampn-panel').classList.add('hidden');
+  closeAarCard();
+}
+
+const AAR_TANKER_TYPES = ['A330T', 'A400'];
+function isAarTanker(m) {
+  return AAR_TANKER_TYPES.includes((m.acftType || '').toUpperCase());
+}
+
+function showAarCard(m) {
+  const card = document.getElementById('aar-card');
+  // Determine tanker and receiver
+  let tanker = null, receivers = [];
+  if (m.refuel && m.refuel.length > 0) {
+    // Explicit 5REFUEL data — this mission is the tanker
+    tanker = m;
+    m.refuel.forEach(rr => {
+      const found = S.missions.find(x => x.callsign.toUpperCase() === rr.receiverCallsign.toUpperCase());
+      receivers.push({ callsign: rr.receiverCallsign, start: rr.start, end: rr.end, mission: found || null });
+    });
+  } else if (m.arinfo) {
+    // Explicit ARINFO — this mission is a receiver; look up the tanker
+    tanker = S.missions.find(x => x.callsign.toUpperCase() === m.arinfo.tankerCallsign.toUpperCase()) || null;
+    receivers = [{ callsign: m.callsign, start: m.arinfo.start, end: m.arinfo.end, mission: m }];
+  } else if (isAarTanker(m)) {
+    // Tanker-type aircraft without explicit 5REFUEL yet — show what we have
+    tanker = m;
+  }
+  if (!tanker) { card.classList.add('hidden'); return; }
+
+  const tankerType = (tanker.acftType || '').toUpperCase() === 'A330T' ? 'MRTT' : (tanker.acftType || '');
+  const etdEta = [tanker.aarEtd, tanker.aarEta].filter(Boolean).join(' – ');
+
+  document.getElementById('aar-card-color').style.background = tanker.color || 'transparent';
+  document.getElementById('aar-card-header').textContent = `${tanker.callsign} AAR Sequence`;
+
+  let bodyHtml = `<div class="aar-tanker-name">${tanker.callsign}</div>`;
+  bodyHtml += `<div class="aar-tanker-sub">${[tankerType, etdEta].filter(Boolean).join('  ')}</div>`;
+
+  receivers.forEach((rr, idx) => {
+    bodyHtml += `<div class="aar-divider"></div>`;
+    const rm = rr.mission;
+    const rcvrLabel = rm ? `${rm.acftCount} × ${rm.acftType}` : '';
+    // ARCT: prefer receiver mission's arct (from AMPN), else rr.start (from ARINFO/5REFUEL)
+    const rcvrTime  = rm?.arct || rr.start || '';
+    const arinfo    = rm?.arinfo || null;
+    const ndar      = arinfo?.ndar || '';
+    const rcvrSub   = rcvrTime ? (ndar ? `${rcvrTime} – ${ndar}` : rcvrTime) : '';
+    const isActive  = rr.callsign.toUpperCase() === m.callsign.toUpperCase();
+    bodyHtml += `<div class="aar-rcvr-row${isActive ? ' active' : ''}">`;
+    bodyHtml += `<div class="aar-rcvr-name">${rr.callsign}${rcvrLabel ? '  ' + rcvrLabel : ''}</div>`;
+    if (rcvrSub) bodyHtml += `<div class="aar-rcvr-sub">${rcvrSub}</div>`;
+    bodyHtml += `</div>`;
+  });
+
+  document.getElementById('aar-card-body').innerHTML = bodyHtml;
+  card.classList.remove('hidden');
+}
+
+function closeAarCard() {
+  document.getElementById('aar-card').classList.add('hidden');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  CSV IMPORT
 // ═══════════════════════════════════════════════════════════════════════════
+function decodeAmpn(v) { return (v || '').replace(/\\n/g, '\n').replace(/\\c/g, ','); }
+function decodeRefuel(s) {
+  if (!s) return [];
+  return s.split(';').filter(Boolean).map(e => {
+    const [receiverCallsign, start, end] = e.split('|');
+    return { receiverCallsign: receiverCallsign||'', start: start||'', end: end||'' };
+  });
+}
+function decodeArinfo(s) {
+  if (!s) return null;
+  const [tankerCallsign, start, ndar] = s.split('|');
+  return tankerCallsign ? { tankerCallsign, start: start||'', ndar: ndar||'' } : null;
+}
+
 function importMissionsCSV(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -5042,6 +5212,15 @@ function importMissionsCSV(e) {
           phase:         parts[9]?.trim()  || '',
           missionType:   parts[10]?.trim() || '',
           missionNumber: parts[11]?.trim() || '',
+          squadron:      parts[12]?.trim() || '',
+          country:       parts[13]?.trim() || '',
+          service:       parts[14]?.trim() || '',
+          ampn:          decodeAmpn(parts[15]?.trim() || ''),
+          refuel:        decodeRefuel(parts[16]?.trim() || ''),
+          arinfo:        decodeArinfo(parts[17]?.trim() || ''),
+          aarEtd:        parts[18]?.trim() || '',
+          aarEta:        parts[19]?.trim() || '',
+          arct:          parts[20]?.trim() || '',
           waypoints: [],
           datumPoints: [],
           aoo: null,
