@@ -1759,8 +1759,9 @@ function importATOMissions() {
     };
     S.missions.push(m);
   });
+  const firstImportedIdx = S.missions.length - _atoParsed.length;
   closeAtoModal();
-  S.active = S.missions.length - _atoParsed.length; // select first imported mission
+  S.active = firstImportedIdx; // select first imported mission
   reloadFormInputs();
   renderAll();
   updatePreview();
