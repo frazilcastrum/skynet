@@ -203,6 +203,10 @@ html, body {
 }
 .btn-clear-tab:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
 
+/* ─── AAR Card (Builder) ─────────────────────────────────────────────── */
+.aar-card-builder .aar-sub-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--grey); margin: 10px 0 6px; padding-bottom: 4px; border-bottom: 1px dashed var(--border); }
+.aar-card-builder .aar-sub-header:first-child { margin-top: 0; }
+
 /* ─── Form Grid ──────────────────────────────────────────────────────── */
 .form-grid { display: grid; gap: 8px; }
 .form-row { display: grid; gap: 8px; }
@@ -766,7 +770,13 @@ mark.ato-tok { background: rgba(20,189,235,.4); color: #fff; border-radius: 2px;
       </div>
     </div>
 
-    <!-- Card 3: AMPN Notes -->
+    <!-- Card 3: AAR Card -->
+    <div class="card aar-card-builder" id="aar-card-builder" style="display:none">
+      <div class="section-header">AAR Sequence</div>
+      <div id="aar-card-builder-body"></div>
+    </div>
+
+    <!-- Card 4: AMPN Notes -->
     <div class="card">
       <div class="section-header">Notes (AMPN)</div>
       <textarea id="ampn-textarea" placeholder="Amplifying notes…"
@@ -1120,7 +1130,101 @@ function moveRoute(idx, dir) { moveItem(M().route, idx, dir); renderAll(); updat
 // RENDER
 // ═══════════════════════════════════════════════════════════════════════
 
-function renderAll() { renderTabs(); renderSwatches(); renderRoute(); }
+function renderAll() { renderTabs(); renderSwatches(); renderRoute(); renderAarCard(); }
+
+function isAarTanker(m) {
+  const t = (m.acftType || '').toUpperCase();
+  return t === 'A330T' || t === 'A330MRTT' || t === 'A400' || t === 'KC135' || t === 'KC46' || t === 'KC10';
+}
+
+function renderAarCard() {
+  const card = document.getElementById('aar-card-builder');
+  const body = document.getElementById('aar-card-builder-body');
+  const m = M();
+
+  // Determine tanker and receivers
+  let tanker = null, receivers = [], isTankerView = false;
+
+  if (m.refuel && m.refuel.length > 0) {
+    isTankerView = true;
+    tanker = m;
+    m.refuel.forEach(rr => {
+      const found = S.missions.find(x => x.callsign.toUpperCase() === rr.receiverCallsign.toUpperCase());
+      receivers.push({ callsign: rr.receiverCallsign, start: rr.start, end: rr.end, acftCount: rr.acftCount, acftType: rr.acftType, mission: found || null });
+    });
+  } else if (m.arinfo) {
+    tanker = S.missions.find(x => x.callsign.toUpperCase() === m.arinfo.tankerCallsign.toUpperCase()) || null;
+    if (!tanker) tanker = { callsign: m.arinfo.tankerCallsign, acftType: '', color: '', aarEtd: '', aarEta: '' };
+    if (tanker.refuel && tanker.refuel.length > 0) {
+      tanker.refuel.forEach(rr => {
+        const found = S.missions.find(x => x.callsign.toUpperCase() === rr.receiverCallsign.toUpperCase());
+        receivers.push({ callsign: rr.receiverCallsign, start: rr.start, end: rr.end, acftCount: rr.acftCount, acftType: rr.acftType, mission: found || null });
+      });
+    } else {
+      receivers.push({ callsign: m.callsign, start: m.arinfo.start, end: m.arinfo.ndar, acftCount: m.acftCount, acftType: m.acftType, mission: m });
+    }
+  } else if (isAarTanker(m)) {
+    isTankerView = true;
+    tanker = m;
+  }
+
+  if (!tanker) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  const tankerType = (tanker.acftType || '').toUpperCase() === 'A330T' ? 'MRTT' : (tanker.acftType || '');
+  const etdEta = [tanker.aarEtd, tanker.aarEta].filter(Boolean).join(' – ');
+
+  // Ident keys: tanker fields → own MSNACFT/AMPN if tanker, else ARINFO on receiver
+  // Receiver fields → own 5REFUEL if tanker, else ARINFO on receiver
+  const tkCsIdent  = isTankerView ? 'MSNACFT' : 'ARINFO';
+  const tkTimeIdent = isTankerView ? 'AMPN' : 'ARINFO';
+  const rcvrIdent  = isTankerView ? '5REFUEL' : 'ARINFO';
+
+  let html = `<div class="form-grid">`;
+
+  // Tanker section
+  html += `<div class="aar-sub-header">${isTankerView ? 'Tanker' : 'Tanker Reference'}</div>`;
+  html += `<div class="form-row cols-4">`;
+  html += `<div class="form-group"><label class="form-label">Callsign</label><input class="input" readonly data-aar-ident="${tkCsIdent}" value="${esc(tanker.callsign)}"></div>`;
+  html += `<div class="form-group"><label class="form-label">Type</label><input class="input" readonly data-aar-ident="${tkCsIdent}" value="${esc(tankerType)}"></div>`;
+  html += `<div class="form-group"><label class="form-label">ETD</label><input class="input mono" readonly data-aar-ident="${tkTimeIdent}" value="${esc(tanker.aarEtd || '')}"></div>`;
+  html += `<div class="form-group"><label class="form-label">ETA</label><input class="input mono" readonly data-aar-ident="${tkTimeIdent}" value="${esc(tanker.aarEta || '')}"></div>`;
+  html += `</div>`;
+
+  // Receivers
+  if (receivers.length > 0) {
+    html += `<div class="aar-sub-header">Receivers</div>`;
+    receivers.forEach(rr => {
+      const rm = rr.mission;
+      const rcvrType = rr.acftType || (rm?.acftType || '');
+      const rcvrCount = rr.acftCount || (rm?.acftCount || '');
+      const rcvrTime = rm?.arct || rr.start || '';
+      const ndar = rm?.arinfo?.ndar || rr.end || '';
+      html += `<div class="form-row cols-4">`;
+      html += `<div class="form-group"><label class="form-label">Callsign</label><input class="input" readonly data-aar-ident="${rcvrIdent}" value="${esc(rr.callsign)}"></div>`;
+      html += `<div class="form-group"><label class="form-label">Type / Count</label><input class="input" readonly data-aar-ident="${rcvrIdent}" value="${esc(rcvrCount > 1 ? rcvrCount + ' × ' + rcvrType : rcvrType)}"></div>`;
+      html += `<div class="form-group"><label class="form-label">ARCT</label><input class="input mono" readonly data-aar-ident="${rcvrIdent}" value="${esc(rcvrTime)}"></div>`;
+      html += `<div class="form-group"><label class="form-label">NDAR</label><input class="input mono" readonly data-aar-ident="${rcvrIdent}" value="${esc(ndar)}"></div>`;
+      html += `</div>`;
+    });
+  }
+
+  html += `</div>`;
+  body.innerHTML = html;
+
+  // Attach ATO reference highlight handlers
+  body.querySelectorAll('[data-aar-ident]').forEach(input => {
+    input.addEventListener('focus', () => {
+      const ref = _atoRefBlocks.find(p => p.lineStart === M().atoLineStart);
+      if (!ref) return;
+      const ident = input.dataset.aarIdent;
+      // For ETD/ETA fields, skip token match (local time won't match Zulu in ATO)
+      const fieldValue = (ident === 'AMPN' || ident === 'ARINFO') ? '' : (input.value || '');
+      renderAtoRef(ref.lineStart, ident, fieldValue);
+    });
+    input.addEventListener('blur', () => renderAtoRef(_atoRefActiveMsn, null, null));
+  });
+}
 
 function renderRoute() {
   const list  = document.getElementById('route-list');
