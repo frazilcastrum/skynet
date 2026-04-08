@@ -96,9 +96,9 @@ html, body {
 /* ─── Layout ─────────────────────────────────────────────────────────── */
 .layout {
   display: grid;
-  grid-template-columns: 1fr 420px;
+  grid-template-columns: 504px 656px 504px;
   gap: 20px;
-  max-width: 1300px;
+  max-width: 1744px;
   margin: 0 auto;
   padding: 20px;
   min-height: calc(100vh - 52px);
@@ -149,14 +149,10 @@ html, body {
 }
 .tabs-scroll {
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
-  overflow-x: auto;
   flex: 1;
-  padding-bottom: 2px;
 }
-.tabs-scroll::-webkit-scrollbar { height: 3px; }
-.tabs-scroll::-webkit-scrollbar-track { background: transparent; }
-.tabs-scroll::-webkit-scrollbar-thumb { background: rgba(3,43,67,.12); border-radius: 2px; }
 .mission-tab {
   display: inline-flex;
   align-items: center;
@@ -549,6 +545,71 @@ html, body {
 .suggest-name { font-size: 11px; color: var(--light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .suggest-coords { font-family: 'IBM Plex Mono','Consolas',monospace; font-size: 10px; color: rgba(170,170,170,.55); }
 
+/* ─── ATO Reference Panel ──────────────────────────────────────────── */
+.ref-col {
+  position: sticky;
+  top: 72px;
+  height: calc(100vh - 92px);
+  display: flex;
+  flex-direction: column;
+}
+.ato-ref-card {
+  background: #0e1e2c;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,.2);
+}
+.ato-ref-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(20,189,235,.15);
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--cyan);
+  gap: 6px;
+}
+.ato-ref-badge {
+  font-size: 9px;
+  font-weight: 600;
+  background: rgba(20,189,235,.12);
+  color: rgba(20,189,235,.7);
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: .04em;
+  margin-left: auto;
+}
+.ato-ref-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  font-family: 'IBM Plex Mono', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.ato-ref-empty {
+  padding: 24px 0;
+  color: rgba(255,255,255,.18);
+  font-size: 11px;
+  text-align: center;
+}
+.ato-ref-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: rgba(255,251,255,.28);
+  min-height: 1.7em;
+}
+.ato-ref-line.msn-line   { color: rgba(255,251,255,.5); }
+.ato-ref-line.msn-active { color: #FFFBFF; background: rgba(20,189,235,.07); }
+.ato-ref-line.field-hl   { color: #14BDEB; background: rgba(20,189,235,.16); font-weight: 600; }
+mark.ato-tok { background: rgba(20,189,235,.4); color: #fff; border-radius: 2px; padding: 0 1px; }
+
 /* ─── Responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; padding: 12px; gap: 14px; }
@@ -595,6 +656,19 @@ html, body {
 
 <!-- ═══════════════════════════════════════════════════════ LAYOUT ════ -->
 <div class="layout">
+
+  <!-- ── ATO REFERENCE PANEL ── -->
+  <div class="ref-col">
+    <div class="ato-ref-card">
+      <div class="ato-ref-header">
+        ATO Reference
+        <span class="ato-ref-badge" id="ato-ref-badge"></span>
+      </div>
+      <div class="ato-ref-content" id="ato-ref-content">
+        <div class="ato-ref-empty">Paste and parse an ATO to see the reference here.</div>
+      </div>
+    </div>
+  </div>
 
   <!-- ── LEFT COLUMN ── -->
   <div class="left-col">
@@ -937,6 +1011,11 @@ function setActiveMission(idx) {
   if (idx === S.active) return;
   S.active = idx;
   reloadFormInputs(); renderAll(); updatePreview();
+  // Sync reference panel to new active mission
+  const m = M();
+  const matched = _atoRefBlocks.find(p => p.lineStart === m.atoLineStart);
+  _atoRefActiveMsn = matched?.lineStart ?? null;
+  renderAtoRef(_atoRefActiveMsn, null, null);
 }
 
 function autoGrow(el) { el.style.height = 'auto'; el.style.height = (el.scrollHeight + 4) + 'px'; }
@@ -1152,6 +1231,21 @@ function attachRouteListeners(el, item) {
       input.addEventListener('blur',  () => { setTimeout(hideSuggest, 160); });
     }
   });
+  // ATO reference highlighting for route items
+  el.querySelectorAll('input').forEach(input => {
+    input.addEventListener('focus', () => {
+      const m = M();
+      const ref = _atoRefBlocks.find(p => p.lineStart === m.atoLineStart);
+      if (!ref) return;
+      if (item.amsnlocLine != null) {
+        renderAtoRef(ref.lineStart, 'AMSNLOC', item.label || '', item.amsnlocLine);
+      } else {
+        // dep or arr point — label appears in AMSNDAT DEPLOC/ARRLOC
+        renderAtoRef(ref.lineStart, 'AMSNDAT', item.label || '');
+      }
+    });
+    input.addEventListener('blur', () => renderAtoRef(_atoRefActiveMsn, null, null));
+  });
   // Vertex fields
   el.querySelectorAll('[data-vtx-field]').forEach(input => {
     input.addEventListener('input', () => {
@@ -1171,7 +1265,9 @@ function attachRouteListeners(el, item) {
 // ATO PARSER
 // ═══════════════════════════════════════════════════════════════════════
 
-let _atoParsed = []; // holds parsed mission objects until user confirms
+let _atoParsed = [];    // holds parsed mission objects until user confirms
+let _atoRefBlocks = []; // persistent copy — survives closeAtoModal clearing _atoParsed
+let _atoRaw = '';
 
 // Look up a code in the combined waypoint DB (case-insensitive)
 function wdbLookup(code) {
@@ -1242,6 +1338,7 @@ function parseATO() {
     // 5REFUEL appears as a standalone keyword on its own line (no / suffix)
     // followed by a header row and data rows, terminated by //
     if (/^5REFUEL$/i.test(line)) {
+      const rawLineStart = i;
       const parts = [];
       i++;
       while (i < allLines.length) {
@@ -1250,7 +1347,7 @@ function parseATO() {
         parts.push(next);
         i++;
       }
-      records.push({ type: '5REFUEL', content: parts.join('\n') });
+      records.push({ type: '5REFUEL', content: parts.join('\n'), rawLineStart, rawLineEnd: i - 1 });
       continue;
     }
 
@@ -1258,9 +1355,10 @@ function parseATO() {
     if (!kwMatch) { i++; continue; }
     const kw = kwMatch[1];
     if (kw === 'AMPN') {
-      let content = line.slice(kw.length + 1); // strip "AMPN/"
+      const rawLineStart = i;
+      let content = line.slice(kw.length + 1);
       if (content.includes('//')) {
-        records.push({ type: 'AMPN', content: content.replace(/\/\/.*$/, '').trim() });
+        records.push({ type: 'AMPN', content: content.replace(/\/\/.*$/, '').trim(), rawLineStart, rawLineEnd: i });
         i++;
       } else {
         const parts = [content];
@@ -1271,10 +1369,10 @@ function parseATO() {
           parts.push(next);
           i++;
         }
-        records.push({ type: 'AMPN', content: parts.join('\n').trim() });
+        records.push({ type: 'AMPN', content: parts.join('\n').trim(), rawLineStart, rawLineEnd: i - 1 });
       }
     } else {
-      records.push({ type: kw, content: line.replace(/\/\/$/, '') });
+      records.push({ type: kw, content: line.replace(/\/\/$/, ''), rawLine: i });
       i++;
     }
   }
@@ -1306,36 +1404,61 @@ function parseATO() {
         break;
       }
       case 'AMSNDAT': {
-        // Each AMSNDAT opens a new mission card
         curBlock = {
           datLine: rec.content, msnLine: '', locLines: [], ampn: '',
           country: currentCountry, service: currentService, unit: { ...currentUnit },
+          rawLines: { AMSNDAT: rec.rawLine },
         };
         msnBlocks.push(curBlock);
         break;
       }
       case 'AMPN': {
-        if (curBlock) curBlock.ampn = rec.content;
+        if (curBlock) {
+          curBlock.ampn = rec.content;
+          curBlock.rawLines.AMPN = { start: rec.rawLineStart ?? rec.rawLine, end: rec.rawLineEnd ?? rec.rawLine };
+        }
         break;
       }
       case 'MSNACFT': {
-        if (curBlock) curBlock.msnLine = rec.content;
+        if (curBlock) { curBlock.msnLine = rec.content; curBlock.rawLines.MSNACFT = rec.rawLine; }
         break;
       }
       case 'AMSNLOC': {
-        if (curBlock) curBlock.locLines.push(rec.content);
+        if (curBlock) {
+          curBlock.locLines.push(rec.content);
+          if (!curBlock.rawLines.AMSNLOC) curBlock.rawLines.AMSNLOC = [];
+          curBlock.rawLines.AMSNLOC.push(rec.rawLine);
+        }
         break;
       }
       case '5REFUEL': {
-        if (curBlock) { if (!curBlock.refuelBlocks) curBlock.refuelBlocks = []; curBlock.refuelBlocks.push(rec.content); }
+        if (curBlock) {
+          if (!curBlock.refuelBlocks) curBlock.refuelBlocks = [];
+          curBlock.refuelBlocks.push(rec.content);
+          curBlock.rawLines['5REFUEL'] = { start: rec.rawLineStart, end: rec.rawLineEnd };
+        }
         break;
       }
       case 'ARINFO': {
-        if (curBlock) curBlock.arInfoLine = rec.content;
+        if (curBlock) { curBlock.arInfoLine = rec.content; curBlock.rawLines.ARINFO = rec.rawLine; }
         break;
       }
     }
   }
+
+  // Compute line ranges: end = last data line owned by this block
+  // (AMSNLOC last entry, or ARINFO, or 5REFUEL end, or AMPN end, or MSNACFT, or AMSNDAT)
+  // This avoids including TSKCNTRY/SVCTASK/TASKUNIT preamble of the next mission.
+  msnBlocks.forEach((block, idx) => {
+    const rl = block.rawLines;
+    let last = rl.AMSNDAT ?? 0;
+    if (rl.MSNACFT != null) last = Math.max(last, rl.MSNACFT);
+    if (rl.AMPN) last = Math.max(last, rl.AMPN.end);
+    if (rl.AMSNLOC && rl.AMSNLOC.length) last = Math.max(last, ...rl.AMSNLOC);
+    if (rl['5REFUEL']) last = Math.max(last, rl['5REFUEL'].end);
+    if (rl.ARINFO != null) last = Math.max(last, rl.ARINFO);
+    block.lineEnd = last;
+  });
 
   if (msnBlocks.length === 0) { alert('No AMSNDAT records found.'); return; }
 
@@ -1419,10 +1542,11 @@ function parseATO() {
     const aarAmpn = parseAmpnAar(block.ampn);
 
     return { callsign, acftType, acftCount, depICAO, etd, arrICAO, eta,
-             mode3, missionNumber, missionType, waypoints,
+             mode3, mode3raw, missionNumber, missionType, waypoints,
              ampn: block.ampn,
              squadron: block.unit.code, country: block.country, service: block.service,
-             refuel, arinfo, aarEtd: aarAmpn.etd, aarEta: aarAmpn.eta, arct: aarAmpn.arct };
+             refuel, arinfo, aarEtd: aarAmpn.etd, aarEta: aarAmpn.eta, arct: aarAmpn.arct,
+             rawLines: block.rawLines, lineStart: block.rawLines.AMSNDAT, lineEnd: block.lineEnd };
   });
 
   // Cross-validate 5REFUEL ↔ ARINFO
@@ -1481,6 +1605,119 @@ function parseATO() {
   document.getElementById('ato-modal-summary').innerHTML = html + warnHtml;
   document.getElementById('ato-modal-phase').value = '';
   document.getElementById('ato-modal-overlay').classList.add('open');
+  _atoRaw = raw;
+  _atoRefBlocks = _atoParsed; // persist before modal may clear _atoParsed
+  renderAtoRef(null, null, null);
+}
+
+// ── ATO Reference Panel ─────────────────────────────────────────────────
+let _atoRefActiveMsn = null;
+
+const FIELD_IDENT_MAP = {
+  callsign:        'MSNACFT',
+  acftType:        'MSNACFT',
+  acftCount:       'MSNACFT',
+  mode3Input:      'MSNACFT',
+  missionType:     'AMSNDAT',
+  depICAO:         'AMSNDAT',
+  etd:             'AMSNDAT',
+  arrICAO:         'AMSNDAT',
+  eta:             'AMSNDAT',
+  'ampn-textarea': 'AMPN',
+};
+
+function renderAtoRef(activeMsnId, activeIdentKey, fieldValue, specificLine = null) {
+  const el = document.getElementById('ato-ref-content');
+  const badge = document.getElementById('ato-ref-badge');
+  if (!_atoRaw) {
+    el.innerHTML = '<div class="ato-ref-empty">Paste and parse an ATO<br>to see the reference here.</div>';
+    if (badge) badge.textContent = '';
+    return;
+  }
+
+  // Build lineIndex → { msnId, idents } map
+  const lineMap = {};
+  _atoRefBlocks.forEach(m => {
+    if (m.lineStart == null || m.lineEnd == null) return;
+    for (let li = m.lineStart; li <= m.lineEnd; li++) {
+      lineMap[li] = { msnId: m.lineStart, idents: new Set() };
+    }
+    const rl = m.rawLines || {};
+    if (rl.AMSNDAT != null) lineMap[rl.AMSNDAT]?.idents.add('AMSNDAT');
+    if (rl.MSNACFT != null) lineMap[rl.MSNACFT]?.idents.add('MSNACFT');
+    if (rl.AMPN) for (let li = rl.AMPN.start; li <= rl.AMPN.end; li++) lineMap[li]?.idents.add('AMPN');
+    if (rl['5REFUEL']) for (let li = rl['5REFUEL'].start; li <= rl['5REFUEL'].end; li++) lineMap[li]?.idents.add('5REFUEL');
+    if (rl.ARINFO != null) lineMap[rl.ARINFO]?.idents.add('ARINFO');
+    (rl.AMSNLOC || []).forEach(li => lineMap[li]?.idents.add('AMSNLOC'));
+  });
+
+  const lines = _atoRaw.split(/\r?\n/);
+  let html = '';
+  let scrollTarget = -1;
+
+  lines.forEach((line, li) => {
+    const info = lineMap[li];
+    const isActiveMsn = info?.msnId === activeMsnId;
+    const isOtherMsn  = !!info && !isActiveMsn;
+    const isFieldHl   = specificLine != null
+      ? (li === specificLine && isActiveMsn)
+      : (isActiveMsn && !!activeIdentKey && info.idents.has(activeIdentKey));
+
+    let cls = 'ato-ref-line';
+    if (isFieldHl)        { cls += ' field-hl'; if (scrollTarget < 0) scrollTarget = li; }
+    else if (isActiveMsn) { cls += ' msn-active'; if (scrollTarget < 0) scrollTarget = li; }
+    else if (isOtherMsn)  cls += ' msn-line';
+
+    // Escape HTML
+    let text = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') || '&nbsp;';
+
+    // Token-level highlight when a field value is known and this is the field line
+    if (isFieldHl && fieldValue && fieldValue.length >= 2) {
+      const safe = fieldValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      text = text.replace(new RegExp('(' + safe + ')', 'gi'), '<mark class="ato-tok">$1</mark>');
+    }
+
+    html += `<div class="${cls}" data-li="${li}">${text}</div>`;
+  });
+
+  el.innerHTML = html;
+  if (badge) badge.textContent = _atoRefBlocks.length ? `${_atoRefBlocks.length} msn` : '';
+
+  // Scroll to target line
+  if (scrollTarget >= 0) {
+    const target = el.querySelector(`[data-li="${scrollTarget}"]`);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function setupAtoRefFocusHandlers() {
+  Object.entries(FIELD_IDENT_MAP).forEach(([id, identKey]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('focus', () => {
+      const m = M();
+      const matched = _atoRefBlocks.find(p => p.lineStart === m.atoLineStart);
+      // mode3: use raw ATO token (e.g. "31881") so it can be found in the MSNACFT line
+      // etd/eta: local time won't exist in raw ATO — just highlight the line, no token match
+      let fieldValue = el.value || '';
+      if (id === 'mode3Input') fieldValue = matched?.mode3raw || '';
+      if (id === 'etd' || id === 'eta') fieldValue = '';
+      renderAtoRef(matched?.lineStart ?? null, identKey, fieldValue);
+    });
+    el.addEventListener('input', () => {
+      const m = M();
+      const matched = _atoRefBlocks.find(p => p.lineStart === m.atoLineStart);
+      if (_atoRefActiveMsn) {
+        let fieldValue = el.value || '';
+        if (id === 'mode3Input') fieldValue = matched?.mode3raw || '';
+        if (id === 'etd' || id === 'eta') fieldValue = '';
+        renderAtoRef(matched?.lineStart ?? null, identKey, fieldValue);
+      }
+    });
+    el.addEventListener('blur', () => {
+      renderAtoRef(_atoRefActiveMsn, null, null);
+    });
+  });
 }
 
 function closeAtoModal() {
@@ -1505,21 +1742,33 @@ function importATOMissions() {
       acftCount: parsed.acftCount, depICAO: parsed.depICAO, etd: parsed.etd,
       arrICAO: parsed.arrICAO, eta: parsed.eta, color,
       mode3: parsed.mode3, phase, missionType: parsed.missionType,
-      missionNumber: parsed.missionNumber,
+      missionNumber: parsed.missionNumber, atoLineStart: parsed.lineStart,
       squadron: parsed.squadron || '', country: parsed.country || '',
       service: parsed.service || '', ampn: parsed.ampn || '',
       refuel: parsed.refuel || [], arinfo: parsed.arinfo || null,
       aarEtd: parsed.aarEtd || '', aarEta: parsed.aarEta || '', arct: parsed.arct || '',
-      route: parsed.waypoints.map(w => ({ id: uid(), type: 'point', label: w.label,
-        lat: w.lat || '', lon: w.lon || '', totEarly: w.totEarly, totLate: w.totLate })),
+      route: parsed.waypoints.map((w, wi) => {
+        const depOffset = parsed.depICAO ? 1 : 0;
+        const locLines = parsed.rawLines?.AMSNLOC;
+        const amsnlocIdx = wi - depOffset;
+        const amsnlocLine = (locLines && amsnlocIdx >= 0 && amsnlocIdx < locLines.length)
+          ? locLines[amsnlocIdx] : null;
+        return { id: uid(), type: 'point', label: w.label,
+          lat: w.lat || '', lon: w.lon || '', totEarly: w.totEarly, totLate: w.totLate, amsnlocLine };
+      }),
     };
     S.missions.push(m);
   });
   closeAtoModal();
-  S.active = S.missions.length - 1;
+  S.active = S.missions.length - _atoParsed.length; // select first imported mission
   reloadFormInputs();
   renderAll();
   updatePreview();
+  // Sync reference panel to the newly active mission
+  const activeParsed = _atoRefBlocks.find(p => p.lineStart === M().atoLineStart);
+  _atoRefActiveMsn = activeParsed?.lineStart ?? null;
+  renderAtoRef(_atoRefActiveMsn, null, null);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1923,6 +2172,7 @@ function escHtml(str) {
 
 renderAll();
 updatePreview();
+setupAtoRefFocusHandlers();
 </script>
 </body>
 </html>
