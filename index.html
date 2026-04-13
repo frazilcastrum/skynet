@@ -238,6 +238,16 @@ body {
   border-radius: var(--radius-sm); margin-left: 2px; min-width: 22px; text-align: center;
 }
 .layer-row:hover .layer-expand { color: var(--text-1); background: rgba(0,0,0,0.06); }
+.layer-label-toggle {
+  font-size: 10px; font-weight: 700; color: var(--text-4); padding: 1px 4px;
+  flex-shrink: 0; line-height: 1; transition: color .12s, background .12s;
+  border-radius: var(--radius-sm); margin-left: 1px; cursor: pointer;
+  font-family: 'Georgia', serif; font-style: italic;
+  border: 1px solid transparent;
+}
+.layer-label-toggle.on { color: var(--accent); border-color: var(--accent); }
+.layer-row:hover .layer-label-toggle { color: var(--text-2); }
+.layer-label-toggle.on:hover { color: var(--accent); }
 .layer-sub { display: none; padding: 2px 0 4px 22px; }
 .layer-sub-item {
   display: flex; align-items: center; gap: 6px;
@@ -272,17 +282,7 @@ body {
   top: 0; left: 0;
   display: block;
 }
-#no-map-hint {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  color: rgba(255,255,255,.35);
-  pointer-events: none;
-}
-#no-map-hint .hint-icon { font-size: 40px; margin-bottom: 10px; }
-#no-map-hint h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-#no-map-hint p { font-size: 12px; line-height: 1.6; }
+#no-map-hint { display: none !important; }
 #calib-warn {
   position: absolute;
   top: 10px; left: 50%;
@@ -1114,30 +1114,69 @@ body {
 #ato-panel-close  { position:absolute; top:6px; right:8px; border:none; background:none; color:var(--text-3); cursor:pointer; font-size:13px; line-height:1; padding:2px 4px; border-radius:4px; }
 #ato-panel-close:hover { color:var(--text-1); background:var(--bg-hover); }
 
-/* ── AMPN Notes Panel (top-left) ─────────────────────────────────────── */
-#ampn-panel {
+/* ── Left Card Stack (AMPN → freetext → AAR) ────────────────────────── */
+#left-card-stack {
   position: absolute;
   top: 12px;
   left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 120;
+  max-height: calc(100% - 60px);
+  overflow-y: auto;
+  pointer-events: none;
+}
+#left-card-stack > * { pointer-events: auto; }
+
+/* ── AMPN Notes Panel ─────────────────────────────────────────────────── */
+#ampn-panel {
+  position: relative;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 10px 14px 12px 14px;
   min-width: 220px;
   max-width: 340px;
-  max-height: 340px;
-  overflow-y: auto;
   box-shadow: var(--shadow-md);
-  z-index: 120;
   font-size: 12px;
 }
 #ampn-panel.hidden { display: none; }
 
-/* ── AAR Card (bottom-right) ──────────────────────────────────────────── */
+/* ── Free-text Note Card ──────────────────────────────────────────────── */
+#freetext-panel {
+  position: relative;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px 12px 14px;
+  min-width: 220px;
+  max-width: 340px;
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+}
+#freetext-panel.hidden { display: none; }
+#freetext-title {
+  width: 100%;
+  border: none; background: none; outline: none;
+  font-size: 13px; font-weight: 700; color: var(--text-1);
+  font-family: inherit; padding: 0; margin-bottom: 4px;
+}
+#freetext-title::placeholder { color: var(--text-4); font-weight: 600; }
+#freetext-body {
+  width: 100%;
+  border: none; background: none; outline: none;
+  font-size: 11px; color: var(--text-2);
+  font-family: inherit; line-height: 1.6;
+  resize: none; padding: 0;
+  min-height: 48px; max-height: 200px;
+  overflow-y: auto;
+}
+#freetext-body::placeholder { color: var(--text-4); }
+
+/* ── AAR Card ─────────────────────────────────────────────────────────── */
 #aar-card {
-  position: absolute;
-  bottom: 40px;
-  right: 12px;
+  position: relative;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -1145,7 +1184,6 @@ body {
   min-width: 240px;
   max-width: 340px;
   box-shadow: var(--shadow-md);
-  z-index: 120;
   font-size: 12px;
 }
 #aar-card.hidden { display: none; }
@@ -1340,8 +1378,8 @@ body {
   <input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="importMissionsCSV(event)">
   <span class="btn-sep"></span>
   <div class="btn-group">
-    <button class="btn-header btn-sm" id="export-btn" onclick="exportJSON()">↓ JSON</button>
-    <button class="btn-header btn-sm" onclick="document.getElementById('import-file').click()">↑ JSON</button>
+    <button class="btn-header btn-sm" id="export-btn" onclick="exportJSON()">↓ Workspace</button>
+    <button class="btn-header btn-sm" onclick="document.getElementById('import-file').click()">↑ Workspace</button>
     <input type="file" id="import-file" accept=".json" class="hidden" onchange="importJSON(event)">
   </div>
 </header>
@@ -1368,6 +1406,7 @@ body {
           <span class="layer-checkbox"></span>
           <span class="layer-dot" style="background:rgba(220,38,38,0.5);border:1.5px dashed #B91C1C;box-sizing:border-box"></span>
           <span class="layer-label">SCSDA</span>
+          <span class="layer-label-toggle on" id="ll-scsda" onclick="event.stopPropagation();toggleLayerLabels('scsda',this)" title="Toggle labels">Aa</span>
           <span class="layer-expand" id="lx-scsda" onclick="event.stopPropagation();toggleLayerExpand('scsda')">▸</span>
         </label>
         <div class="layer-sub" id="ls-scsda"></div>
@@ -1375,13 +1414,23 @@ body {
           <span class="layer-checkbox"></span>
           <span class="layer-dot" style="background:#007FB5;border:2px dashed #007FB5;box-sizing:border-box"></span>
           <span class="layer-label">BS26 Airspace</span>
+          <span class="layer-label-toggle on" id="ll-xbs" onclick="event.stopPropagation();toggleLayerLabels('xbs',this)" title="Toggle labels">Aa</span>
           <span class="layer-expand" id="lx-xbs" onclick="event.stopPropagation();toggleLayerExpand('xbs')">▸</span>
         </label>
         <div class="layer-sub" id="ls-xbs"></div>
-        <label class="layer-row checked" id="lr-airways">
+        <label class="layer-row checked" id="lr-user">
+          <span class="layer-checkbox"></span>
+          <span class="layer-dot" style="background:rgba(139,92,246,0.25);border:1.5px solid #8b5cf6;box-sizing:border-box"></span>
+          <span class="layer-label">User Layer</span>
+          <span class="layer-label-toggle on" id="ll-user" onclick="event.stopPropagation();toggleLayerLabels('user',this)" title="Toggle labels">Aa</span>
+          <span class="layer-expand" id="lx-user" onclick="event.stopPropagation();toggleLayerExpand('user')">▸</span>
+        </label>
+        <div class="layer-sub" id="ls-user"></div>
+        <label class="layer-row" id="lr-airways">
           <span class="layer-checkbox"></span>
           <span class="layer-dot" style="background:#032B43;border:1px solid #aaa"></span>
           <span class="layer-label">Airways</span>
+          <span class="layer-label-toggle on" id="ll-airways" onclick="event.stopPropagation();toggleLayerLabels('airways',this)" title="Toggle labels">Aa</span>
           <span class="layer-expand" id="lx-airways" onclick="event.stopPropagation();toggleLayerExpand('airways')">▸</span>
         </label>
         <div class="layer-sub" id="ls-airways"></div>
@@ -1389,11 +1438,13 @@ body {
           <span class="layer-checkbox"></span>
           <span class="layer-dot" style="background:#14BDEB"></span>
           <span class="layer-label">Missions</span>
+          <span class="layer-label-toggle on" id="ll-routes" onclick="event.stopPropagation();toggleLayerLabels('routes',this)" title="Toggle labels">Aa</span>
         </label>
         <label class="layer-row checked" id="lr-datums">
           <span class="layer-checkbox"></span>
           <span class="layer-dot" style="background:#f59e0b;transform:rotate(45deg);border-radius:2px"></span>
           <span class="layer-label">Datum Points</span>
+          <span class="layer-label-toggle on" id="ll-datums" onclick="event.stopPropagation();toggleLayerLabels('datums',this)" title="Toggle labels">Aa</span>
         </label>
       </div>
       <div class="panel-section" id="asset-filter-section">
@@ -1466,23 +1517,34 @@ body {
       <div id="ato-panel-mode3"></div>
     </div>
 
-    <!-- AMPN notes panel — top-left, shown when selected mission has AMPN data -->
-    <div id="ampn-panel" class="hidden">
-      <button id="ampn-panel-close" onclick="closeAtoPanel()">✕</button>
-      <div id="ampn-panel-squadron"></div>
-      <div id="ampn-panel-meta"></div>
-      <div id="ampn-msn-section" class="hidden">
-        <div class="ampn-section-label">Mission Notes</div>
-        <div id="ampn-msn-text" class="ampn-text"></div>
+    <!-- Left card stack: AMPN → freetext → AAR -->
+    <div id="left-card-stack">
+      <!-- AMPN notes panel -->
+      <div id="ampn-panel" class="hidden">
+        <button id="ampn-panel-close" onclick="closeAtoPanel()">✕</button>
+        <div id="ampn-panel-squadron"></div>
+        <div id="ampn-panel-meta"></div>
+        <div id="ampn-msn-section" class="hidden">
+          <div class="ampn-section-label">Mission Notes</div>
+          <div id="ampn-msn-text" class="ampn-text"></div>
+        </div>
       </div>
-    </div>
 
-    <!-- AAR Card — bottom-right, shown when selected mission has AAR data -->
-    <div id="aar-card" class="hidden">
-      <div id="aar-card-color"></div>
-      <button id="aar-card-close" onclick="closeAarCard()">✕</button>
-      <div id="aar-card-header"></div>
-      <div id="aar-card-body"></div>
+      <!-- Free-text note card -->
+      <div id="freetext-panel" class="hidden">
+        <input id="freetext-title" type="text" placeholder="Title"
+          oninput="if(S.selectedMission){const m=S.missions.find(x=>x.id===S.selectedMission);if(m){m.noteTitle=this.value;saveToStorage();}}">
+        <textarea id="freetext-body" placeholder="Type notes here…"
+          oninput="if(S.selectedMission){const m=S.missions.find(x=>x.id===S.selectedMission);if(m){m.noteBody=this.value;saveToStorage();}}this.style.height='auto';this.style.height=this.scrollHeight+'px';"></textarea>
+      </div>
+
+      <!-- AAR Card -->
+      <div id="aar-card" class="hidden">
+        <div id="aar-card-color"></div>
+        <button id="aar-card-close" onclick="closeAarCard()">✕</button>
+        <div id="aar-card-header"></div>
+        <div id="aar-card-body"></div>
+      </div>
     </div>
   </div>
 
@@ -1660,8 +1722,8 @@ body {
       <div>
         <label class="field-label">Type</label>
         <div class="type-selector" id="airspace-type-selector">
-          <button class="type-btn selected" data-type="airway" onclick="selectAirspaceType('airway')">Airway</button>
-          <button class="type-btn" data-type="area" onclick="selectAirspaceType('area')">Area</button>
+          <button class="type-btn selected" data-type="area" onclick="selectAirspaceType('area')">Area</button>
+          <button class="type-btn" data-type="airway" onclick="selectAirspaceType('airway')">Airway</button>
         </div>
       </div>
       <div class="field-row">
@@ -1693,6 +1755,9 @@ body {
     <div class="modal-footer">
       <button class="btn danger hidden" id="airspace-delete-btn" onclick="deleteCurrentAirspace()">Delete</button>
       <div class="spacer"></div>
+      <button class="btn btn-sm" onclick="document.getElementById('user-layer-import').click()" title="Import User Layer">↑ Import</button>
+      <button class="btn btn-sm" onclick="exportUserLayer()" title="Export User Layer">↓ Export</button>
+      <input type="file" id="user-layer-import" accept=".json" class="hidden" onchange="importUserLayer(event)">
       <button class="btn" onclick="closeModal('modal-airspace')">Cancel</button>
       <button class="btn primary" onclick="saveAirspace()">Save</button>
     </div>
@@ -1926,6 +1991,33 @@ const XBS_AREAS = [
       {lat:1.55000,lon:104.50500},
     ]
   },
+  // ── Tioman Corridors (AIP XBS 2026, Section 8.3.2) ──────────────────────
+  // 5NM-wide corridors; ±2.5NM perpendicular offset from centreline.
+  // Tioman terminal: 5NM radius around 024906N 1040950E (approximated by corridor extent).
+  {
+    id: 'tioman-north',
+    label: 'TIOMAN NORTH',
+    altLabel: 'VPK – Tioman (5NM wide)',
+    color: { fill: 'rgba(0,160,220,0.10)', stroke: '#007FB5' },
+    points: [
+      {lat:3.515, lon:103.376},  // NE side at VPK (Pekan)
+      {lat:2.850, lon:104.190},  // NE side at Tioman
+      {lat:2.786, lon:104.138},  // SW side at Tioman
+      {lat:3.451, lon:103.324},  // SW side at VPK
+    ]
+  },
+  {
+    id: 'tioman-south',
+    label: 'TIOMAN SOUTH',
+    altLabel: 'VMR – Tioman (5NM wide)',
+    color: { fill: 'rgba(0,160,220,0.10)', stroke: '#007FB5' },
+    points: [
+      {lat:2.422, lon:103.864},  // SE side at VMR (Mersing)
+      {lat:2.790, lon:104.195},  // SE side at Tioman
+      {lat:2.846, lon:104.133},  // NW side at Tioman
+      {lat:2.478, lon:103.802},  // NW side at VMR
+    ]
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2073,7 +2165,8 @@ const S = {
   missions: [],          // see mission schema
   airspaces: [],         // see airspace schema
   datumPoints: [],       // global datum points [{id,label,lat,lon,symbol,color}]
-  layers: { tiles:true, coastline:true, airways:true, dpr:false, exercise:false, routes:true, aoo:false, datums:true, xbs:true, scsda:true },
+  layers: { tiles:true, coastline:true, airways:false, dpr:false, exercise:false, routes:true, aoo:false, datums:true, xbs:true, scsda:true, user:true },
+  labels: { scsda:true, xbs:true, user:true, airways:true, routes:true, datums:true },
   visibleMissions: new Set(),
   selectedMission: null,
   // pan/zoom
@@ -2311,6 +2404,7 @@ function saveToStorage() {
     airspaces: S.airspaces,
     datumPoints: S.datumPoints,
     layers: S.layers,
+    labels: S.labels,
     visibleMissions: [...S.visibleMissions],
     baseImageSrc: S.baseImageSrc,
     panX: S.panX, panY: S.panY, zoom: S.zoom,
@@ -2324,7 +2418,7 @@ function saveDefaultToStorage() {
     calibPoints: S.calibPoints,
     baseImageSrc: S.baseImageSrc,
     panX: S.panX, panY: S.panY, zoom: S.zoom,
-    layers: S.layers,
+    layers: S.layers, labels: S.labels,
   };
   try {
     localStorage.setItem('skyplot-default', JSON.stringify(data));
@@ -2355,6 +2449,7 @@ function loadFromStorage() {
     S.airspaces    = data.airspaces || [];
     S.datumPoints  = data.datumPoints || [];
     S.layers      = { ...S.layers, ...(data.layers||{}) };
+    if (data.labels) S.labels = { ...S.labels, ...data.labels };
     S.visibleMissions = new Set(data.visibleMissions || S.missions.map(m=>m.id));
     S.panX = data.panX||0; S.panY = data.panY||0; S.zoom = data.zoom||1;
     if (data.baseImageSrc) loadImageFromSrc(data.baseImageSrc);
@@ -2369,7 +2464,7 @@ function exportJSON() {
     calibPoints: S.calibPoints,
     missions: S.missions,
     airspaces: S.airspaces,
-    layers: S.layers,
+    layers: S.layers, labels: S.labels,
     version: 1
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -2391,10 +2486,41 @@ function importJSON(e) {
       S.airspaces    = data.airspaces || [];
       S.datumPoints  = data.datumPoints || [];
       if (data.layers) S.layers = { ...S.layers, ...data.layers };
+      if (data.labels) S.labels = { ...S.labels, ...data.labels };
       S.visibleMissions = new Set(S.missions.map(m=>m.id));
       if (S.calibPoints.length >= 2) S.transform = computeTransform(S.calibPoints);
       saveToStorage(); refreshAll();
     } catch(err) { alert('Invalid JSON file: ' + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function exportUserLayer() {
+  if (!S.airspaces.length) { alert('User Layer is empty — nothing to export.'); return; }
+  const blob = new Blob([JSON.stringify({ airspaces: S.airspaces }, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'skyplot-user-layer.json';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function importUserLayer(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      const incoming = data.airspaces || [];
+      if (!incoming.length) { alert('No airspaces found in file.'); return; }
+      // Merge: skip any whose id already exists
+      const existingIds = new Set(S.airspaces.map(a => a.id));
+      const added = incoming.filter(a => !existingIds.has(a.id));
+      S.airspaces.push(...added);
+      saveToStorage(); buildLayerSubItems(); refreshAll();
+      alert(`Imported ${added.length} airspace(s) into User Layer.`);
+    } catch(err) { alert('Invalid file: ' + err.message); }
   };
   reader.readAsText(file);
   e.target.value = '';
@@ -2531,16 +2657,14 @@ function render() {
   if (S.baseImage) {
     ctx.drawImage(S.baseImage, 0, 0);
   }
-  // Hide the "no map" hint whenever tiles are on OR an image is loaded
-  document.getElementById('no-map-hint').style.display =
-    (S.baseImage || S.layers.tiles) ? 'none' : 'block';
-
   // Layer: Coastline vector (offline fallback — drawn first, below all overlays)
   if (S.layers.coastline) drawCoastline();
   // Layer: South China Sea Danger Areas (lowest — reference background)
   if (S.layers.scsda) drawScsda();
   // Layer: BS26 pre-defined exercise zones
   if (S.layers.xbs) drawXbsAreas();
+  // Layer: User Layer (user-drawn airways + areas)
+  if (S.layers.user) drawUserLayer();
   // Layer: Airways
   if (S.layers.airways) drawAirways();
   // Layer: Routes + mission datums
@@ -2630,8 +2754,10 @@ function drawAirways() {
     if (aw.visible === false) continue;
     if (!aw.points || aw.points.length < 2) continue;
     drawPolyline(aw.points, { color: '#032B43', width: 0.9 });
-    const mid = aw.points[Math.floor(aw.points.length / 2)];
-    drawLabel(aw.designator, mid.lon, mid.lat, { size:12, weight:700, color:'#032B43', bg:'rgba(255,255,255,0.7)' });
+    if (S.labels.airways) {
+      const mid = aw.points[Math.floor(aw.points.length / 2)];
+      drawLabel(aw.designator, mid.lon, mid.lat, { size:12, weight:700, color:'#032B43', bg:'rgba(255,255,255,0.7)' });
+    }
   }
 }
 
@@ -2665,42 +2791,57 @@ function drawExercise() {
   }
 }
 
+function drawUserLayer() {
+  for (const as of S.airspaces) {
+    if (as.visible === false) continue;
+    if (!as.points || as.points.length < 2) continue;
+    const col = DPR_COLORS[as.type] || { fill: 'rgba(139,92,246,0.12)', stroke: '#8b5cf6' };
+    if (as.type === 'airway' || as.points.length < 3) {
+      drawPolyline(as.points, { color: col.stroke, width: 1.5 });
+    } else {
+      drawPolygonFill(as.points, { fill: col.fill, stroke: col.stroke, width: 1.5, dash: [6,4] });
+    }
+    if (as.designator && S.labels.user) {
+      const mid = as.points[Math.floor(as.points.length / 2)];
+      drawLabel(as.designator, mid.lon, mid.lat, { size:11, weight:700, color: col.stroke, bg:'rgba(255,255,255,0.75)' });
+    }
+  }
+}
+
 function drawXbsAreas() {
   for (const area of XBS_AREAS) {
     if (area.visible === false) continue;
     if (!area.points || area.points.length < 3) continue;
     const col = area.color;
     drawPolygonFill(area.points, { fill: col.fill, stroke: col.stroke, width: 1.5, dash:[8,4] });
-    // Label: name on top line, altitude on second line
-    const c = centroid(area.points);
-    const p = coordToImgPx(c.lon, c.lat);
-    if (!p) continue;
-    const sz = 11 / S.zoom;
-    const szSub = 9 / S.zoom;
-    const pad = 3 / S.zoom;
-    const lineGap = 2 / S.zoom;
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    // Measure both lines
-    ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
-    const w1 = ctx.measureText(area.label).width;
-    ctx.font = `600 ${szSub}px Manrope,'Segoe UI',system-ui`;
-    const w2 = ctx.measureText(area.altLabel).width;
-    const boxW = Math.max(w1, w2) + pad*2;
-    const boxH = sz + szSub + lineGap + pad*2;
-    const bx = p.px - boxW/2, by = p.py - boxH/2;
-    ctx.fillStyle = 'rgba(255,255,255,0.80)';
-    ctx.fillRect(bx, by, boxW, boxH);
-    // Line 1
-    ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
-    ctx.fillStyle = col.stroke;
-    ctx.fillText(area.label, p.px, by + pad + sz/2);
-    // Line 2
-    ctx.font = `600 ${szSub}px Manrope,'Segoe UI',system-ui`;
-    ctx.fillStyle = '#444';
-    ctx.fillText(area.altLabel, p.px, by + pad + sz + lineGap + szSub/2);
-    ctx.restore();
+    if (S.labels.xbs) {
+      const c = centroid(area.points);
+      const p = coordToImgPx(c.lon, c.lat);
+      if (!p) continue;
+      const sz = 11 / S.zoom;
+      const szSub = 9 / S.zoom;
+      const pad = 3 / S.zoom;
+      const lineGap = 2 / S.zoom;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
+      const w1 = ctx.measureText(area.label).width;
+      ctx.font = `600 ${szSub}px Manrope,'Segoe UI',system-ui`;
+      const w2 = ctx.measureText(area.altLabel).width;
+      const boxW = Math.max(w1, w2) + pad*2;
+      const boxH = sz + szSub + lineGap + pad*2;
+      const bx = p.px - boxW/2, by = p.py - boxH/2;
+      ctx.fillStyle = 'rgba(255,255,255,0.80)';
+      ctx.fillRect(bx, by, boxW, boxH);
+      ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
+      ctx.fillStyle = col.stroke;
+      ctx.fillText(area.label, p.px, by + pad + sz/2);
+      ctx.font = `600 ${szSub}px Manrope,'Segoe UI',system-ui`;
+      ctx.fillStyle = '#444';
+      ctx.fillText(area.altLabel, p.px, by + pad + sz + lineGap + szSub/2);
+      ctx.restore();
+    }
   }
 }
 
@@ -2763,32 +2904,34 @@ function drawScsda() {
     if (!area.points || area.points.length < 3) continue;
     const col = area.color;
     drawPolygonFill(area.points, { fill: col.fill, stroke: col.stroke, width: 1.2, dash:[4,3] });
-    const c = centroid(area.points);
-    const p = coordToImgPx(c.lon, c.lat);
-    if (!p) continue;
-    const sz    = 10 / S.zoom;
-    const szSub =  8 / S.zoom;
-    const pad   =  3 / S.zoom;
-    const gap   =  2 / S.zoom;
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
-    const w1 = ctx.measureText(area.label).width;
-    ctx.font = `500 ${szSub}px Manrope,'Segoe UI',system-ui`;
-    const w2 = ctx.measureText(area.altLabel).width;
-    const boxW = Math.max(w1, w2) + pad * 2;
-    const boxH = sz + szSub + gap + pad * 2;
-    const bx = p.px - boxW / 2, by = p.py - boxH / 2;
-    ctx.fillStyle = 'rgba(255,255,255,0.78)';
-    ctx.fillRect(bx, by, boxW, boxH);
-    ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
-    ctx.fillStyle = col.stroke;
-    ctx.fillText(area.label, p.px, by + pad + sz / 2);
-    ctx.font = `500 ${szSub}px Manrope,'Segoe UI',system-ui`;
-    ctx.fillStyle = '#555';
-    ctx.fillText(area.altLabel, p.px, by + pad + sz + gap + szSub / 2);
-    ctx.restore();
+    if (S.labels.scsda) {
+      const c = centroid(area.points);
+      const p = coordToImgPx(c.lon, c.lat);
+      if (!p) continue;
+      const sz    = 10 / S.zoom;
+      const szSub =  8 / S.zoom;
+      const pad   =  3 / S.zoom;
+      const gap   =  2 / S.zoom;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
+      const w1 = ctx.measureText(area.label).width;
+      ctx.font = `500 ${szSub}px Manrope,'Segoe UI',system-ui`;
+      const w2 = ctx.measureText(area.altLabel).width;
+      const boxW = Math.max(w1, w2) + pad * 2;
+      const boxH = sz + szSub + gap + pad * 2;
+      const bx = p.px - boxW / 2, by = p.py - boxH / 2;
+      ctx.fillStyle = 'rgba(255,255,255,0.78)';
+      ctx.fillRect(bx, by, boxW, boxH);
+      ctx.font = `700 ${sz}px Manrope,'Segoe UI',system-ui`;
+      ctx.fillStyle = col.stroke;
+      ctx.fillText(area.label, p.px, by + pad + sz / 2);
+      ctx.font = `500 ${szSub}px Manrope,'Segoe UI',system-ui`;
+      ctx.fillStyle = '#555';
+      ctx.fillText(area.altLabel, p.px, by + pad + sz + gap + szSub / 2);
+      ctx.restore();
+    }
   }
 }
 
@@ -2838,7 +2981,7 @@ function drawRoutes() {
         ctx.fill(); ctx.stroke();
         ctx.restore();
         // AO label at centroid
-        if (wp.label) drawLabel(wp.label, wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.85)', dy: 16 });
+        if (wp.label && S.labels.routes) drawLabel(wp.label, wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.85)', dy: 16 });
       } else {
         // Regular waypoint dot
         ctx.save();
@@ -2852,19 +2995,21 @@ function drawRoutes() {
       }
 
       // TOT labels (both regular and AO waypoints)
-      if (wp.totEarly && wp.totLate) {
-        const dyTop = wp.isAO ? -28 : -14;
-        drawLabel(wp.totEarly, wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.8)', dy: dyTop });
-        drawLabel(wp.totLate,  wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.8)', dy: dyTop + 14 });
-      } else if (wp.totEarly || wp.totLate) {
-        const dy = wp.isAO ? -28 : -14;
-        drawLabel(wp.totEarly || wp.totLate, wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.8)', dy });
+      if (S.labels.routes) {
+        if (wp.totEarly && wp.totLate) {
+          const dyTop = wp.isAO ? -28 : -14;
+          drawLabel(wp.totEarly, wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.8)', dy: dyTop });
+          drawLabel(wp.totLate,  wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.8)', dy: dyTop + 14 });
+        } else if (wp.totEarly || wp.totLate) {
+          const dy = wp.isAO ? -28 : -14;
+          drawLabel(wp.totEarly || wp.totLate, wp.lon, wp.lat, { size:11, weight:700, color: m.color, bg:'rgba(255,255,255,0.8)', dy });
+        }
       }
     }
     // Mission datum points (circle + cross, mission colour)
     for (const dp of (m.datumPoints || [])) {
       if (dp.lat == null || dp.lon == null) continue;
-      drawDatumMarker(dp.lon, dp.lat, 'circle-cross', m.color, dp.label);
+      drawDatumMarker(dp.lon, dp.lat, 'circle-cross', m.color, S.labels.routes ? dp.label : '');
     }
     if (!isFocused) ctx.restore();
   }
@@ -2874,7 +3019,7 @@ function drawGlobalDatums() {
   for (const dp of S.datumPoints) {
     if (dp.visible === false) continue;
     if (dp.lat == null || dp.lon == null) continue;
-    drawDatumMarker(dp.lon, dp.lat, dp.symbol || 'diamond', dp.color || '#f59e0b', dp.label);
+    drawDatumMarker(dp.lon, dp.lat, dp.symbol || 'diamond', dp.color || '#f59e0b', S.labels.datums ? dp.label : '');
   }
 }
 
@@ -3886,7 +4031,7 @@ function deleteCurrentMission() {
 //  AIRSPACE MODAL
 // ═══════════════════════════════════════════════════════════════════════════
 let editingAirspaceId = null;
-let selectedAirspaceType = 'airway';
+let selectedAirspaceType = 'area';
 
 function openAirspaceModal(airspace) {
   editingAirspaceId = airspace ? airspace.id : null;
@@ -4451,6 +4596,7 @@ function setupLayerToggles() {
     ['lr-coastline',  'coastline'],
     ['lr-scsda',      'scsda'],
     ['lr-xbs',      'xbs'],
+    ['lr-user',     'user'],
     ['lr-airways',  'airways'],
     ['lr-routes',   'routes'],
     ['lr-datums',   'datums'],
@@ -4554,6 +4700,7 @@ function flushMissions() {
   closeAtoPanel();
   saveToStorage();
   updateMissionCards();
+  updateAssetFilterList();
   render();
 }
 
@@ -5098,11 +5245,21 @@ function showAtoPanel(m) {
     document.getElementById('ampn-msn-text').textContent = m.ampn || '';
     msnSec.classList.toggle('hidden', !m.ampn);
   }
+
+  // Free-text note card — always visible when mission is selected
+  const ftPanel = document.getElementById('freetext-panel');
+  document.getElementById('freetext-title').value = m.noteTitle || '';
+  document.getElementById('freetext-body').value = m.noteBody || '';
+  const ftBody = document.getElementById('freetext-body');
+  ftBody.style.height = 'auto';
+  ftBody.style.height = ftBody.scrollHeight + 'px';
+  ftPanel.classList.remove('hidden');
 }
 
 function closeAtoPanel() {
   document.getElementById('ato-panel').classList.add('hidden');
   document.getElementById('ampn-panel').classList.add('hidden');
+  document.getElementById('freetext-panel').classList.add('hidden');
   closeAarCard();
 }
 
@@ -5390,6 +5547,20 @@ function initDefaultTransform() {
 // ═══════════════════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════════════════
+function toggleLayerLabels(key, el) {
+  S.labels[key] = !S.labels[key];
+  el.classList.toggle('on', S.labels[key]);
+  saveToStorage();
+  render();
+}
+
+function syncLabelToggles() {
+  for (const key of Object.keys(S.labels)) {
+    const el = document.getElementById('ll-' + key);
+    if (el) el.classList.toggle('on', S.labels[key]);
+  }
+}
+
 function toggleLayerExpand(key) {
   const sub = document.getElementById('ls-' + key);
   const btn = document.getElementById('lx-' + key);
@@ -5419,6 +5590,7 @@ function renderSubItems(containerId, items, labelFn) {
 function buildLayerSubItems() {
   renderSubItems('ls-scsda',   SCSDA_AREAS,    a => `${a.label} ${a.name}`);
   renderSubItems('ls-xbs',     XBS_AREAS,      a => a.label);
+  renderSubItems('ls-user',    S.airspaces,    a => a.designator || '(unnamed)');
   renderSubItems('ls-airways', AIRWAY_ROUTES,  a => a.designator);
 }
 
@@ -5430,6 +5602,7 @@ function init() {
   setupLayerToggles();
   buildLayerSubItems();
   loadFromStorage();
+  syncLabelToggles();
   initDefaultTransform();
   refreshAll();
 }
